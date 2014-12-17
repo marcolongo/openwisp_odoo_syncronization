@@ -1,4 +1,9 @@
-openwisp_odoo_syncronization
+Openwisp Odoo Syncronizator
 ============================
 
-Syncronize odoo database with openwisp information
+Syncronize odoo client with openwisp user information
+
+Openwisp: https://github.com/lucapietroni/OpenWISP-User-Management-System
+Odoo: https://github.com/odoo/odoo/tree/8.0
+
+
