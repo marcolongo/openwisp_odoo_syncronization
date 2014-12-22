@@ -1,0 +1,13 @@
+<?php
+
+return array(
+    'dbhost' => 'localhost',
+    'dbuser' => 'marco',
+	'dbpassword' => 'password',
+	'dbname' => 'database',
+	'odoourl' => 'http://172.0.0.1:8069',
+	'odoouser' => 'admin',
+	'odoopsw' => 'm1e2s3h4'
+);
+
+?>
