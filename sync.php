@@ -44,13 +44,11 @@ function sync_operator(&$conn,&$rpc){
 $operator=include('config.operator.php');
 foreach($operator as $key => $value)
 	{
-	echo $key;
 	$sql="SELECT * FROM `operator_users` WHERE `operator_id` =". $key;
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids)){
 		if ($row->user_id=="") continue;
 		$sql="\nSELECT * FROM `user_openwisp_odoo` WHERE `uid_openwisp_id` =". $row->user_id;
-		echo $sql;
 		$result= mysqli_query($conn, $sql) or die("\nError 01: " . $conn->error . "\n");
 		if($result->num_rows>0){
 			$resuser=mysqli_fetch_object($result);
@@ -67,13 +65,14 @@ $ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 while($row = mysqli_fetch_object($ids))
 	{
 		//var_dump($row);
+		//echo preg_replace('/[^(\x20-\x7F)]*/','', $row->address);
 		//echo $row->surname;
 	 	//echo $rpc->create( array('name'=>$row->surname), "res.partner");
 	 	
 	 	$user = array(
 	  	'name'=>$row->given_name. " ".$row->surname
 	 	, 'city' => $row->city
-	 	, 'contact_address' => $row->address . " " . $row->city . " " . $row->zip . " " .$row->state
+	 	, 'contact_address' =>preg_replace("/[^a-zA-Z0-9\s]/", "'",  $row->address) . " " . $row->city . " " . $row->zip . " " .$row->state
 	 	, 'customer' => true
 	 	, 'display_name' => $row->given_name. " ".$row->surname
 	 	, 'email' => $row->email
@@ -84,7 +83,7 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'lang' => 'it_IT'
 	 	, 'mobile' => $row->mobile_prefix .  $row->mobile_suffix
 	 	, 'notify_email' => 'always'
-	 	, 'street' => $row->address
+	 	, 'street' => preg_replace("/[^a-zA-Z0-9\s]/", "'",  $row->address)
 	 	, 'type' => 'contact'
 	 	, 'tz' => 'Europe/Rome'
 	 	, 'tz_offset' => '+0100'
@@ -96,6 +95,7 @@ while($row = mysqli_fetch_object($ids))
 	 //	, 'property_stock_supplier' => array("8","Partner Locations/Suppliers") 
 	 //	, 'section_id' => array("1","Direct Sales") 
 	 	);
+		var_dump($user);
 	 	$userid = $rpc->create( $user, "res.partner");
 		if($userid!= -1){
 		create_bank_account($conn,$rpc,$row->id,$userid,$row->iban );
