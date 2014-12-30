@@ -179,11 +179,12 @@ class OpenERP {
         $msg->addParam(new xmlrpcval("write", "string"));/** method which u like to execute */
         $msg->addParam(new xmlrpcval($id_val, "array"));/** ids of record which to be updting..   this array must be xmlrpcval array */
         $msg->addParam(new xmlrpcval($nval, "struct"));/** parameters of the methods with values....  */
-        $resp = $client->send($msg);
+		$resp = $client->send($msg);
         
-        if ($resp->faultCode())
+        if ($resp->faultCode()){
+			var_dump($resp);
             return -1;  /* if the record is not writable or not existing the ids or not having permissions  */
-        else
+        }else
             return $resp->value();  /* return new generated id of record */
     }
 
