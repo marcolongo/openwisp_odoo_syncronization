@@ -7,7 +7,7 @@ return array(
 	'dbname' => 'database',
 	'odoourl' => 'http://172.0.0.1:8069',
 	'odoouser' => 'admin',
-	'odoopsw' => 'm1e2s3h4'
+	'odoopsw' => 'password'
 );
 
 ?>
