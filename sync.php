@@ -34,9 +34,9 @@ $x = $rpc->login("admin", "m1e2s3h4-", "meshcom", $config['odoourl'] . "xmlrpc/2
 
 
 sync_user($conn,$rpc);
-sync_operator($conn,$rpc);
+//sync_operator($conn,$rpc);
 create_contract($conn,$rpc);
-
+update_contract($conn,$rpc);
 
 die();
 
@@ -60,6 +60,34 @@ foreach($operator as $key => $value)
 
 }
 
+
+function update_contract(&$conn,&$rpc){
+	echo "Aggiorno i contratti recenti \n";
+	$sql="SELECT * FROM `user_openwisp_odoo` WHERE `date_updated` =0";
+	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+	while($row = mysqli_fetch_object($ids))
+	{
+		if(strtotime($row->invoice_date_start) <  strtotime("now")){
+
+			
+//			$final = date("Y-m-d", strtotime("+4 month", $row->invoice_date_start));
+			
+			$final= date('Y-m-15',strtotime($row->invoice_date_start) + (60*60*24*150));
+			
+			$contract = $rpc->read(array($row->uid_odoo_id),array('contract_ids'),"res.partner");	
+			var_dump($contract);
+			$agentid = $rpc->write(array($contract[0]['contract_ids'][0]),array('recurring_next_date'=>$final),"account.analytic.account" );
+			$sql="UPDATE user_openwisp_odoo SET `date_updated` = '1' WHERE `uid_openwisp_id` = ".$row->uid_openwisp_id ;
+			mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+		}
+			
+	
+	}
+
+
+}
+
+
 function sync_user(&$conn,&$rpc){
 	echo "Carico Clienti \n";
 	$sql="SELECT products.name as `product_name`, usrprod.product_id, u.id, `email`, `given_name`, `surname`, `birth_date`, `state`, `city`, `address`, `zip`, `username`, `mobile_prefix`, `mobile_suffix`, `verified`, `notes`, `tax_code`, `vat_number`, `iban`, `cpe_template_id`, `pg_ragione_sociale`, `pg_partita_iva`, u.created_at, `pg_indirizzo`, `pg_cap`, `pf_cf`, `pf_luogo_di_nascita`, `inst_indirizzo`, `inst_cap`, `inst_cpe_modello`, `inst_cpe_username`, `inst_cpe_password`, `inst_cpe_mac`, `is_company`, `pg_comune`, `has_credits` FROM `users` as u INNER JOIN (`user_products` as usrprod INNER JOIN `products` as products on usrprod.product_id = products.id)on u.id = usrprod.user_id WHERE u.id NOT IN (SELECT uid_openwisp_id FROM user_openwisp_odoo)";
@@ -81,6 +109,7 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'employee' => false
 		, 'vat' => empty($row->pg_partita_iva)?"":"IT".$row->pg_partita_iva
 		, 'date' => $row->created_at
+		, 'fiscalcode' => empty($row->pf_cf)?"":strtoupper($row->pf_cf)
 	 	, 'is_company' => $row->is_company?true:false
 	 	, 'lang' => 'it_IT'
 	 	, 'mobile' => $row->mobile_prefix .  $row->mobile_suffix
@@ -109,6 +138,11 @@ while($row = mysqli_fetch_object($ids))
 
 function create_contract(&$conn,&$rpc){
 	echo "Creo  Contratti \n";
+	$firstinvoicedate = array (date('Y').'-04-15', date('Y').'-07-15', date('Y').'-10-15', (date('Y')+1) .'-01-15'  );
+	$trimestri = array (date('Y').'-04-1', date('Y').'-07-1', date('Y').'-10-1', (date('Y')+1) .'-01-1'  );
+	$invoice_date = 0;
+		
+	
 	$sql="SELECT products.name as `product_name`,
 		  usrprod.product_id,
           u.id as uid,
@@ -123,8 +157,16 @@ function create_contract(&$conn,&$rpc){
 		{
 		
 			$partnerid = $rpc->searchread(array(array('name', 'ilike', $row->given_name . " ". $row->surname)),"res.partner",array ('id','user_id'));
+			for ($i = 1; $i < 3; $i++){
+				if( (strtotime($row->created_at) < strtotime($trimestri[$i -1])) and $i == 1 ){
+					$invoice_date=$firstinvoicedate[$i-1];
+				}elseif( strtotime($trimestri[$i-1]) < strtotime($row->created_at) and strtotime($row->created_at) < trtotime($trimestri[$i])){
+					$invoice_date=$firstinvoicedate[$i-1];
+				}
+			}
+			
 
-					
+			
 			$contract= array (
 			'type' => 'contract'
 			, 'date_start' => $row->created_at
@@ -135,6 +177,7 @@ function create_contract(&$conn,&$rpc){
 			, 'manager_id' => $partnerid[0]['user_id'][0]
 			, 'recurring_interval' => 3
 			, 'recurring_rule_type' => 'monthly'
+			//, 'recurring_next_date' => $invoice_date
 			, 'recurring_next_date' => '2015-08-17'
 			, 'description' => 'CPE fornita: ' . $row->cpe_temp . "\nCPE macaddress: ". $row->inst_cpe_mac  
 			);
@@ -143,7 +186,7 @@ function create_contract(&$conn,&$rpc){
 				var_dump($contract);
 				echo "errore su utente: ".  $row->given_name . " " . $row->surname;
 				die();
-			}
+			} 
 			$productid = $rpc->searchread(array(array('name_template', 'ilike', $row->product_name)),"product.product",array('id','lst_price'));
 			if(empty($productid)){
 				var_dump($product);
@@ -153,7 +196,7 @@ function create_contract(&$conn,&$rpc){
 			$product= array(
 				'name' => $row->product_name
 				, 'product_id' => $productid[0]['id']
-				, 'quantity' => 1
+				, 'quantity' => 3
 				, 'analytic_account_id' => $contractid
 				, 'price_unit' =>  $productid[0]['lst_price']
 				, 'uom_id' => 1
@@ -164,7 +207,8 @@ function create_contract(&$conn,&$rpc){
 				echo "errore inserimento prodotto x utente: " . $row->given_name . " " . $row->surname;
 				die();
 			}
-		$sql="UPDATE user_openwisp_odoo SET `contract_ready` = '1' WHERE `uid_openwisp_id` = ".$row->uid ;
+		//$sql="UPDATE user_openwisp_odoo SET `contract_ready` = '1',  `invoice_date_start` = $invoice_date , `date_updated` = '0' WHERE `uid_openwisp_id` = ".$row->uid ;
+		$sql="UPDATE user_openwisp_odoo SET `contract_ready` = '1',  `invoice_date_start` = '2015-08-17', `date_updated` = '1' WHERE `uid_openwisp_id` = ".$row->uid ;
 		mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 		}
 
