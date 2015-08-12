@@ -123,6 +123,7 @@ function sync_clienti_vat(&$conn,&$rpc){
 	 COD_PARTIV as 'partita_iva',
 	 BANCAAPPO as banca, 
 	 DIPENDENZA as bancadip, 
+	 clienti.COD_PAG as mod_pag,
 	 CABI as abi,
 	 CAB as cab,
 	 NUM_CC as conto,
@@ -141,9 +142,12 @@ while($row = mysqli_fetch_object($ids))
 		//echo preg_replace('/[^(\x20-\x7F)]*/','', $row->address);
 		
 	 	//echo $rpc->create( array('name'=>$row->surname), "res.partner");
-	 	
-	 		 	
-	 	
+
+	 	$sql="SELECT odoo_id FROM odoo.cp_id_odoo WHERE id = ". $row->mod_pag .";";
+	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
+	 	$termpag = mysqli_fetch_object($result);
+	 	$termpag = $termpag->odoo_id;
 	 	//Manipolazione delle stringhe
 	 	$commerciale= array();
 	 	$localita=explode(" ", $row->localita);
@@ -186,6 +190,7 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'credit_limit' => "0"
 	   , 'state_id' => "110"
 		, 'property_account_position' => 1
+		, 'property_payment_term' => 'account.payment.term,'.$termpag
 		, 'comment' => preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->note1 . "\n" . $row->note2 ."\n" . $row->detnote)
 	 	);
 	 	$userid = $rpc->create( $user, "res.partner");
@@ -248,7 +253,8 @@ function sync_clienti_codfis(&$conn,&$rpc){
 	 clienti.INDIRIZZO as 'indirizzo',
 	 clienti.LOCALITA as 'localita',
 	 COD_PARTIV as 'partita_iva',
-     clienti.COD_FISCAL as'codice_f',
+	 clienti.COD_FISCAL as'codice_f',
+	 clienti.COD_PAG as mod_pag,
 	 BANCAAPPO as banca, 
 	 DIPENDENZA as bancadip, 
 	 CABI as cabi,
@@ -273,6 +279,13 @@ while($row = mysqli_fetch_object($ids))
 		//echo $row->surname;
 	 	//echo $rpc->create( array('name'=>$row->surname), "res.partner");
 	 	
+	 	
+	 	//Cerco la corrispondenza tra le modalità di pagamento
+	 	$sql="SELECT odoo_id FROM odoo.cp_id_odoo WHERE id = ". $row->mod_pag .";";
+	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
+	 	$termpag = mysqli_fetch_object($result);
+	 	$termpag = $termpag->odoo_id;
 	 	//Manipolazione delle stringhe
 	 	$localita=explode(" ", $row->localita);
 	 	$cap= $localita[0];
@@ -317,6 +330,7 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'credit_limit' => "0"
 	   , 'state_id' => "110"
 		, 'property_account_position' => 1
+		, 'property_payment_term' => 'account.payment.term,'.$termpag
 		, 'comment' => preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->note1 . "\n" . $row->note2 ."\n" . (isset($row->detnote) ? $row->detnote : ""))
 	 //	, 'property_stock_supplier' => array("8","Partner Locations/Suppliers") 
 	 //	, 'section_id' => array("1","Direct Sales") 
@@ -462,13 +476,13 @@ function sync_fornitori(&$conn,&$rpc){
 
 function sync_fatture(&$conn,&$rpc){
 	echo "Carico Fatture " . date('Y-m-d H:i:s') ."\n";
-	$sql="SELECT fatture13.NUMERO as numero
+	$sql="SELECT fatture15.NUMERO as numero
 		, N_REGISTRA 
-		, fatture13.DATA
+		, fatture15.DATA
 		, clienti.RAG_SOC as name
 		, condpag.PAGAMENTO
+		, condpag.id
 		, CONSEGNA
-		, condpag.PAGAMENTO
 		, ORARITIRO
 		, DATARITIRO
 		, TOTMERCI
@@ -476,20 +490,30 @@ function sync_fatture(&$conn,&$rpc){
 		, VET_INDIR
 		, VET_LOCAL
 		, VET_PROVI
-		FROM odoo.fatture13 
-		INNER JOIN odoo.condpag on fatture13.PAGAMENTO = condpag.id
-		INNER JOIN odoo.clienti on fatture13.MMCC = clienti.mmcc and fatture13.SSSS = clienti.SSSS;";
+		FROM odoo.fatture15 
+		INNER JOIN odoo.condpag on fatture15.PAGAMENTO = condpag.id
+		INNER JOIN odoo.clienti on fatture15.MMCC = clienti.mmcc and fatture15.SSSS = clienti.SSSS
+		WHERE TIPO_CAUSA NOT LIKE 'N';";
 	
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 		
 	while($row = mysqli_fetch_object($ids))
 	{
-	
+		$state="open";
 		$partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name))),"res.partner");
 		if(empty($partner)){
 	 			echo "errore non trovo il prodotto  $row->name)\n";
 	 		}
-	
+		//Contronllo le modalita di pagamento
+		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58){
+			$state="paid";
+		}
+		$sql="SELECT odoo_id FROM odoo.cp_id_odoo WHERE id = ". $row->id .";";
+	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
+	 	$termpag = mysqli_fetch_object($result);
+	 	$termpag = $termpag->odoo_id;
+	 	
 		$invoice= array(
 			'account_id' => 33
 			, 'company_id' => 1
@@ -498,12 +522,12 @@ function sync_fatture(&$conn,&$rpc){
 			, 'fiscal_position' => 1
 			, 'number' => $row->numero
 			, 'internal_number' => $row->numero
-			, 'payment_term' => 4
+			, 'payment_term' => $termpag
 			, 'partner_id' => $partner[0]
 			, 'journal_id' => 1
-			, 'state' => 'paid'
+			, 'state' => $state
 			, 'type' => 'out_invoice'
-			, 'reconciled' => true
+			, 'reconciled' => false	
 			, 'user_id' => 1
 	
 		);
@@ -518,7 +542,7 @@ function sync_fatture(&$conn,&$rpc){
 		 
 		
 	//	$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
-	$sql="SELECT * FROM odoo.fatmov13 where numero = ". $row->numero;
+	$sql="SELECT * FROM odoo.fatmov15 where numero = ". $row->numero;
 		$items= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 		while($item = mysqli_fetch_object($items)){
 			$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
