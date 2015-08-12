@@ -507,6 +507,15 @@ function sync_fatture(&$conn,&$rpc){
 		//Contronllo le modalita di pagamento
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58){
 			$state="paid";
+		}else{
+		//Controllo se ci sono ri.ba. insolute
+			$sql="SELECT * FROM odoo.scadenze  WHERE NUM_DOC =". $row->numero."  AND DATA_DOC = \"".$row->DATA ."\" AND DATA_SCAD < now() ORDER by DATA_DOC desc;";
+			$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+			$isinsoluto=false
+			while($ribarow = mysqli_fetch_object($result)){
+				if($ribarow->CAUSALE=='INSOLUTO'){$isinsoluto=true}
+			}
+			if($isinsoluto!=true and $result->num_rows > 1){$state="paid";}
 		}
 		$sql="SELECT odoo_id FROM odoo.cp_id_odoo WHERE id = ". $row->id .";";
 	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
@@ -542,11 +551,11 @@ function sync_fatture(&$conn,&$rpc){
 		 
 		
 	//	$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
-	$sql="SELECT * FROM odoo.fatmov15 where numero = ". $row->numero;
+		$sql="SELECT * FROM odoo.fatmov15 where numero = ". $row->numero;
 		$items= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 		while($item = mysqli_fetch_object($items)){
 			$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
-		
+			
 			$line = array(
 				'uos_id' => 1
 				, 'name' => empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name']
@@ -590,7 +599,7 @@ function sync_fatture(&$conn,&$rpc){
 		 		echo "\n\n\n\n\n";
 		 	}
 		 	
-		 if($item->IVA !== ''){	
+		 	if($item->IVA !== ''){	
 			 	$lineiva = array(
 					'invoice_id' => $invoiceid
 					, 'name' => $nameiva
@@ -610,11 +619,31 @@ function sync_fatture(&$conn,&$rpc){
 		 			echo "\n\n\n\n\n";
 		 			continue;
 			 	}
-		
 			}
 		}
-
-	
+		//Aggiungo spese d'incasso se ci sono
+		$sql="SELECT T_SPEINCAS FROM odoo.totfat15 where NUMERO = 1131". $row->numero;
+		$items= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+		while($item = mysqli_fetch_object($items)){
+			$line = array(
+				'uos_id' => 1
+				, 'name' => 'Spese d\incasso'
+				,'invoice_id' => $invoiceid
+				, 'account_id' => 132
+				, 'product_id' => ""
+				, 'company_id' => 1
+				, 'partner_id' => $partner[0]
+				, 'price_unit' => $items->T_SPEINCAS
+				, 'quantity' => 1
+			);
+			$invoicelineid = $rpc->create( $line, "account.invoice.line");
+			if ($invoicelineid== -1){
+				echo "errore sul inseriment linea spese d'incasso\n";
+		 		var_dump($invoice);
+		 		var_dump($line);
+		 		echo "\n\n\n\n\n";
+		 	}
+		}
 	}
 }
 
