@@ -496,7 +496,7 @@ function sync_fatture(&$conn,&$rpc){
 		INNER JOIN odoo.clienti on fatture15.MMCC = clienti.mmcc and fatture15.SSSS = clienti.SSSS
 		WHERE TIPO_CAUSA NOT LIKE 'N'
 		ORDER BY numero ASC
-		LIMIT 10000 OFFSET 843;";
+		LIMIT 10000 OFFSET 843	;";
 	
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
@@ -616,7 +616,7 @@ function sync_fatture(&$conn,&$rpc){
 		 	}elseif($item->IVA == 22){
 		 		$ivacode=79;	
 		 		$nameiva='IVA a debito 22%';
-		 	}elseif($item->IVA == '' or $item->IVA =='NS26') { 
+		 	}elseif($item->IVA == '' or $item->IVA =='NS26' or $item->IVA =='N41V') { 
 		 		$item->IVA == '';
 		 	}else{
 		 		echo "errore sul'iva";
