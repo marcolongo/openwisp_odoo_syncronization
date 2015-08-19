@@ -324,7 +324,7 @@ class OpenERP {
             return $resp->value();
     }
     
-    public function button_click($model, $method_name, $record_ids){
+    public function button_click($model, $method, $record_ids){
         $client = new xmlrpc_client($this->server."object");
         $client->setSSLVerifyPeer(0);
         $client->return_type = 'phpvals';
@@ -365,6 +365,7 @@ class OpenERP {
             return -1; /* if the record is not created  */
         else
             return $resp->value();  /* return new generated id of record */
+             var_dump($resp);
     }
 }
 
