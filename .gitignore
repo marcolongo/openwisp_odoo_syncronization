@@ -18,3 +18,5 @@ fake-eggs/
 parts/
 dist/
 var/
+/tmp.txt
+/xmlrpc-2.2.2/lib/xmlrpc.inc~
