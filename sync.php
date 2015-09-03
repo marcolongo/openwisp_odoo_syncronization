@@ -121,8 +121,9 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'zip' => $row->zip
 	 	, 'country_id' => 110
 	 	, 'credit_limit' => "0"
-	    , 'state_id' => "53"
+		, 'state_id' => "53"
 		, 'property_account_position' => 1
+		, 'property_payment_term' => 'account.payment.term,'."2"
 	 //	, 'property_stock_supplier' => array("8","Partner Locations/Suppliers") 
 	 //	, 'section_id' => array("1","Direct Sales") 
 	 	);
