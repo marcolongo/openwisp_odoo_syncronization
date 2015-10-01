@@ -17,7 +17,7 @@
  */
 session_start();
 
-include("xmlrpc-2.2.2/lib/xmlrpc.inc");
+include("xmlrpc-3.0.1/lib/xmlrpc.inc");
 
 class OpenERP {
 
@@ -164,13 +164,19 @@ class OpenERP {
 
         $id_val = array();
         $count = 0;
+        $count2 = 0;
         foreach ($ids as $id)
             $id_val[$count++] = new xmlrpcval($id, "int");
         $nval = array();
         foreach($values as $k=>$v){
-            $nval[$k] = new xmlrpcval( $v, xmlrpc_get_type($v) );
+            if(is_array($v)){
+                foreach ($v as $d)
+                    $arr[$count2++] = new xmlrpcval($d, "int");
+                $nval[$k]= new xmlrpcval( $arr, "array" );
+            }
+            else
+                $nval[$k] = new xmlrpcval( $v, xmlrpc_get_type($v) );
         }
-
         $msg = new xmlrpcmsg('execute');
         $msg->addParam(new xmlrpcval($this->database, "string"));  //* database name */
         $msg->addParam(new xmlrpcval($this->uid, "int")); /* useid */
@@ -179,6 +185,7 @@ class OpenERP {
         $msg->addParam(new xmlrpcval("write", "string"));/** method which u like to execute */
         $msg->addParam(new xmlrpcval($id_val, "array"));/** ids of record which to be updting..   this array must be xmlrpcval array */
         $msg->addParam(new xmlrpcval($nval, "struct"));/** parameters of the methods with values....  */
+        
 		$resp = $client->send($msg);
         
         if ($resp->faultCode()){

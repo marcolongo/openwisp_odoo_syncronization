@@ -31,14 +31,16 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 echo "\nConnected successfully\n\n";
+file_put_contents('query.txt', '');
+
 
 $rpc = new OpenERP();
-$x = $rpc->login("admin", "m1a1u1c1-", "corrente", $config['odoourl'] . "xmlrpc/2/");
+$x = $rpc->login("admin", "m1a1u1c1-", "mauceri", $config['odoourl'] . "xmlrpc/2/");
 
 
 
 //sync_bank($conn,$rpc);
-/////sync_agent($conn,$rpc);
+////sync_agent($conn,$rpc);
 //sync_clienti_vat($conn,$rpc);
 //sync_clienti_codfis($conn,$rpc);
 //sync_clienti_destcons($conn,$rpc);
@@ -46,7 +48,7 @@ $x = $rpc->login("admin", "m1a1u1c1-", "corrente", $config['odoourl'] . "xmlrpc/
 //sync_gruppi($conn,$rpc);
 //crea_listino($conn,$rpc);
 //sync_articoli($conn,$rpc);
-	sync_fatture($conn,$rpc);
+sync_fatture($conn,$rpc);
 	
 
 
@@ -58,7 +60,7 @@ function sync_agent(&$conn,&$rpc){
 	$sql="SELECT * FROM odoo.agenti";
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids)){
-		if ($row->nominativo=="") continue;
+		if ($row->NOMINATIVO=="") continue;
 		$errstring = array("/", "-", " ");
 		$row->telefono=str_replace($errstring,'',$row->telefono);
 	 	$row->telefono= ctype_digit($row->telefono)? $row->telefono:"";
@@ -148,10 +150,11 @@ while($row = mysqli_fetch_object($ids))
 	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
 	 	$termpag = mysqli_fetch_object($result);
-		 if($termpag->type === 'R')
+		/* if($termpag->type === 'R')
 		 		$conto=237;
 		 elseif ($termpag->type === 'D')
 			$conto=238;
+		*/
 		$termpag = $termpag->odoo_id;
 	 	//Manipolazione delle stringhe
 	 	$commerciale= array();
@@ -194,8 +197,8 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'tz' => 'Europe/Rome'
 	 	, 'tz_offset' => '+0100'
 	 	, 'zip' => $cap
+	 	, 'credit_limit' => 100000
 	 	, 'country_id' => 110
-	 	, 'credit_limit' => "0"
 	   , 'state_id' => "110"
 		, 'property_account_receivable' => $conto
 		, 'property_account_position' => 1
@@ -298,7 +301,7 @@ while($row = mysqli_fetch_object($ids))
 	 	if($termpag->type === 'R')
 	 		$conto=237;
 	 	elseif ($termpag->type === 'D')
-	 		$conto=238;
+	 		$conto=237;
 
 		 $termpag = $termpag->odoo_id;
 	 	//Manipolazione delle stringhe
@@ -342,7 +345,7 @@ while($row = mysqli_fetch_object($ids))
 	 	, 'tz_offset' => '+0100'
 	 	, 'zip' => $cap
 	 	, 'country_id' => 110
-	 	, 'credit_limit' => "0"
+        , 'credit_limit' => 100000
 		, 'state_id' => "110"
 		, 'property_account_receivable' => $conto
 		, 'property_account_position' => 1
@@ -375,7 +378,7 @@ while($row = mysqli_fetch_object($ids))
 	 	$bancaid = $rpc->create( $banca, "res.partner.bank");
 	 	if ($bancaid== -1){
 	 		var_dump($banca);
-	 		die();
+	 		//die();
 	 	}
 	 }	
 
@@ -492,27 +495,7 @@ function sync_fornitori(&$conn,&$rpc){
 
 function sync_fatture(&$conn,&$rpc){
 	echo "Carico Fatture " . date('Y-m-d H:i:s') ."\n";
-	/*$sql="SELECT fatture15.NUMERO as numero
-		, N_REGISTRA 
-		, TIPO_CAUSA 
-		, fatture15.DATA
-		, clienti.RAG_SOC as name
-		, condpag.PAGAMENTO
-		, condpag.id
-		, CONSEGNA
-		, ORARITIRO
-		, DATARITIRO
-		, TOTMERCI
-		, VETTORE
-		, VET_INDIR
-		, VET_LOCAL
-		, VET_PROVI
-		FROM odoo.fatture15 
-		INNER JOIN odoo.condpag on fatture15.PAGAMENTO = condpag.id
-		INNER JOIN odoo.clienti on fatture15.MMCC = clienti.mmcc and fatture15.SSSS = clienti.SSSS
-		WHERE TIPO_CAUSA NOT LIKE 'N'
-		ORDER BY numero ASC;";
-		*/
+		
 		$sql="SELECT fatture.NUMERO as numero
 		, N_REGISTRA 
 		, TIPO_CAUSA 
@@ -532,7 +515,7 @@ function sync_fatture(&$conn,&$rpc){
 		INNER JOIN odoo.condpag on fatture.PAGAMENTO = condpag.id
 		INNER JOIN odoo.clienti on fatture.MMCC = clienti.mmcc and fatture.SSSS = clienti.SSSS
 		ORDER BY numero ASC;";
-	
+		
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
 	{
@@ -542,9 +525,11 @@ function sync_fatture(&$conn,&$rpc){
 		$totiva = 0;
 		$scadenza=$row->DATA;
 		$isinsoluto=false;
+		$invoiceid=0;
 		$partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name))),"res.partner");
 		if(empty($partner)){
 				echo "errore non trovo il CLIENTE  $row->name)\n";
+				continue;
 			}
 		//Contronllo le modalita di pagamento
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58 or $row->id == 114 or $row->id == 80){
@@ -563,222 +548,113 @@ function sync_fatture(&$conn,&$rpc){
 			if($isinsoluto == false and $result->num_rows > 1){$state="paid";}
 		}
 		
-		
+		$sql="SELECT T_FATTURA, T_SPEINCAS, T_IMP1, T_IVA FROM odoo.totfat where NUMERO = ". $row->numero;
+		$items= mysqli_query($conn, $sql) or die("\nError 05: " . mysql_error() . "\n");
+		while($item = mysqli_fetch_object($items)){
+				$totnet= floatval($item->T_IMP1);
+				$totiva= floatval($item->T_IVA);
+		}
 		
 		$sql="SELECT odoo_id FROM odoo.cp_id_odoo WHERE id = ". $row->id .";";
 	 	$result= mysqli_query($conn, $sql) or die("\nError 03: " . mysql_error() . "\n");
 	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
-	 	$termpag = mysqli_fetch_object($result);
-	 	$termpag =  empty($termpag->odoo_id)?"":$termpag->odoo_id;
-	 	/*
-	 	 //Se è una nota di credito
-		 if($row->TIPO_CAUSA==='N'){ //NOTA DI CREDITO
-			sync_paid_nota($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA,$totnet,$totiva,$termpag,$invoiceid,$state);
-			continue;
-		 }
-	 	*/
-	 	$acmoveid =create_account_move($rpc,$partner[0],"2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,$row->DATA,'posted',"2015/".str_pad($counter, 4, '0', STR_PAD_LEFT),4,1);
+		$termpag = mysqli_fetch_object($result);
+		$termpag =  empty($termpag->odoo_id)?"":$termpag->odoo_id;
 		
-		$invoiceid =create_invoice($rpc,33,"2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, '/',$acmoveid,$termpag,$partner[0],$state,'out_invoice','false', $row->numero);
-
-		$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
-		$items= mysqli_query($conn, $sql) or die("\nError 04: " . mysql_error() . "\n");
-		while($item = mysqli_fetch_object($items)){
-			$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
-			
-			$invoicelineid = create_account_move_line($rpc,
-				empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name'],
-				$invoiceid,
-				132,
-				empty($product)?"":$product[0]['id'],
-				$partner[0],
-				$item->PREZZO,
-				$item->QTA);
-			
+		$acmoveid =create_account_move($rpc,$partner[0],"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,$row->DATA,'posted',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT),4,1);
+		
+		 //SE NON E' UNA NOTA DI CREDITO
+		if($row->TIPO_CAUSA!='N'){
 		 	
-		 	if($item->IVA == 20){
-		 		$ivacode=53;	
-		 		$nameiva='IVA a debito 20%';
-		 	}elseif($item->IVA == 21){
-		 		$ivacode=55;
-		 		$nameiva='IVA a debito 21%';	
-		 	}elseif($item->IVA == 4){
-		 		$ivacode=57;
-		 		$nameiva='IVA a debito 4%';	
-		 	}elseif($item->IVA == 10){
-		 		$ivacode=51;
-		 		$nameiva='IVA a debito 10%';	
-		 	}elseif($item->IVA == 22){
-		 		$ivacode=79;	
-		 		$nameiva='IVA a debito 22%';
-		 	}elseif($item->IVA == '' or $item->IVA =='NS26' or $item->IVA =='N41V') { 
-		 		$item->IVA == '';
-		 	}else{
-		 		echo "errore sul'iva";
-		 		var_dump($item->IVA);
-		 		echo "\n\n\n\n\n";
-		 	}
-		 	
-		 	if($item->IVA !== ''){	
-			 	$lineiva = array(
-					'invoice_id' => $invoiceid
-					, 'name' => $nameiva
-					, 'account_id' => 94
-					, 'company_id' => 1
-					, 'base_amount' =>  $item->PREZZO
-					, 'tax_code_id' => $ivacode
-					, 'base_code_id' => ($ivacode - 1)
-					, 'amount' => (($item->PREZZO *  $item->QTA) * $item->IVA /100 )
-				);
-				$invoicelinetaxid = $rpc->create( $lineiva, "account.invoice.tax");
-				if ($invoicelinetaxid== -1){
-					echo "errore sul inserimento iva\n";
-			 		var_dump($invoice);
-		 			var_dump($line);
-		 			var_dump($lineiva);
-		 			echo "\n\n\n\n\n";
-		 			continue;
+			$invoiceid =create_invoice($rpc,33,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, '/',$acmoveid,$termpag,$partner[0],$state,'out_invoice','false', $row->numero, $isinsoluto);
+			if($invoiceid==-1) continue;
+			$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
+			$items= mysqli_query($conn, $sql) or die("\nError 04: " . mysql_error() . "\n");
+			while($item = mysqli_fetch_object($items)){
+				$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
+				$invoicelineid = create_invoice_line($rpc,
+					empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name'],
+					$invoiceid,
+					132,
+					empty($product)?"":$product[0]['id'],
+					$partner[0],
+					$item->PREZZO,
+					$item->QTA);
+			 	if($item->IVA == 20){
+			 		$ivacode=53;	
+			 		$nameiva='IVA a debito 20%';
+			 	}elseif($item->IVA == 21){
+			 		$ivacode=55;
+			 		$nameiva='IVA a debito 21%';	
+			 	}elseif($item->IVA == 4){
+			 		$ivacode=57;
+			 		$nameiva='IVA a debito 4%';	
+			 	}elseif($item->IVA == 10){
+			 		$ivacode=51;
+			 		$nameiva='IVA a debito 10%';	
+			 	}elseif($item->IVA == 22){
+			 		$ivacode=79;	
+			 		$nameiva='IVA a debito 22%';
+			 	}elseif($item->IVA == '' or $item->IVA =='NS26' or $item->IVA =='N41V') { 
+			 		$item->IVA == '';
+			 	}else{
+			 		echo "errore sul'iva";
+			 		var_dump($item->IVA);
+			 		echo "\n\n\n\n\n";
+			 	}
+			 	
+			 	if($item->IVA !== ''){	
+			 		$invoicelinetaxid =create_invoice_tax($rpc,$nameiva,$invoiceid,94,$item->PREZZO,$ivacode,($ivacode - 1),round((($item->PREZZO *  $item->QTA) * $item->IVA /100 ),2));
+				}
+			}
+		
+			//Aggiungo spese d'incasso se ci sono
+			$sql="SELECT T_FATTURA, T_SPEINCAS, T_IMP1, T_IVA FROM odoo.totfat where NUMERO = ". $row->numero;
+			$items= mysqli_query($conn, $sql) or die("\nError 05: " . mysql_error() . "\n");
+			while($item = mysqli_fetch_object($items)){
+				$fattura = $rpc->searchread(array(array('id', '=', $invoiceid)),"account.invoice",array('amount_untaxed','amount_tax','id'));
+				$storno= $totnet - $fattura[0]['amount_untaxed'];
+				if($item->T_SPEINCAS > 0){
+					$invoicelineid = create_invoice_line($rpc,'storno e s. i.'
+					,$invoiceid,132
+					,52586
+					,$partner[0]
+					,$storno
+					,1);
+				
+					$storno= $totiva - $fattura[0]['amount_tax'];
+					$invoicelinetaxid= create_invoice_tax($rpc,'IVA a debito 22%',$invoiceid,94,$storno,79,78,round($storno,2));
 			 	}
 			}
 		}
-		//Aggiungo spese d'incasso se ci sono
-		$sql="SELECT T_FATTURA, T_SPEINCAS, T_IMP1, T_IVA FROM odoo.totfat where NUMERO = ". $row->numero;
-		$items= mysqli_query($conn, $sql) or die("\nError 05: " . mysql_error() . "\n");
-		while($item = mysqli_fetch_object($items)){
-			$totnet= floatval($item->T_IMP1);
-			$totiva= floatval($item->T_IVA);
-			$fattura = $rpc->searchread(array(array('id', '=', $invoiceid)),"account.invoice",array('amount_untaxed','amount_tax','id'));
-			$storno= $totnet - $fattura[0]['amount_untaxed'];
-			if($item->T_SPEINCAS > 0){
-			
-				$invoicelineid = create_account_move_line($rpc,'storno e s. i.'
-				,$invoiceid,132
-				,176238
-				,$partner[0]
-				,$storno
-				,1);
-				
-				
-				$storno= $totiva - $fattura[0]['amount_tax'];
-				$lineiva = array(
-					'invoice_id' => $invoiceid
-					, 'name' => 'IVA a debito 22%'
-					, 'account_id' => 94
-					, 'company_id' => 1
-					, 'base_amount' => $storno
-					, 'tax_code_id' => 79
-					, 'base_code_id' => 78
-					, 'amount' => $storno
-				);
-				$invoicelinetaxid = $rpc->create( $lineiva, "account.invoice.tax");
-				if ($invoicelinetaxid== -1){
-					echo "errore sul inserimento iva\n";
-			 		var_dump($invoice);
-		 			var_dump($line);
-		 			var_dump($lineiva);
-		 			echo "\n\n\n\n\n";
-		 			die();
-		 			continue;
-			 	}
-		 	}
-		}
-		//Creo netto
-		$acmoveline = array(
-					'partner_id' => $partner[0]
-					,'company_id' => 1
-					, 'blocked' => false
-					, 'create_uid' => 1
-					, 'credit' => $totnet
-					, 'debit' => 0
-					, 'journal_id' => 1
-					, 'tax_code_id' => 80
-					, 'state' => 'valid'
-					, 'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
-					, 'account_id' => 132
-					, 'period_id' => 4
-					, 'date' => $row->DATA
-					, 'move_id' => $acmoveid
-					, 'name' => "2015/$counter totale"
-					, 'tax_amount' => $totnet
-					, 'quantity' => 1
-				);
-		$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-		if ($acmovelineid== -1){
- 			var_dump($acmoveline);
-			echo "\n\naccount.move.line TOT\n\n\n";
-			continue;
-		}
-		//Creo IVA
-		$acmoveline = array(
-			'partner_id' => $partner[0]
-			,'company_id' => 1
-			, 'blocked' => false
-			, 'create_uid' => 1
-			, 'credit' => $totiva
-			, 'debit' => 0
-			, 'journal_id' => 1
-			, 'tax_code_id' => 79
-			, 'state' => 'valid'
-			, 'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
-			, 'account_id' => 94
-			, 'period_id' => 4
-			, 'date' => $row->DATA
-			, 'move_id' => $acmoveid
-			, 'name' => "2015/$counter IVA"
-			, 'tax_amount' => $totiva
-			, 'quantity' => 1
-			);
-			
-		$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-		if ($acmovelineid== -1){
- 			var_dump($acmoveline);
-			echo "\n\naccount.move.line IVA\n\n\n";
-			die();
-		}
-			
-		/*
-		$voucher = array(
-			'comment' => "Write-Off"
-			,'is_multi_currency' => false
-			,'journal_id' => $row->id==1?7:8
-			,'partner_id' => $partner[0]
-			,'payment_rate_currency_id' => 1
-			,'create_uid' => 1
-			,'state' => ($state==='paid')?'posted':'draft'
-			,'number' => ($state==='paid')?"BNK1/2015/$counter":''
-			,'pre_line' => true
-			,'type' => 'receipt'
-			,'payment_option' => 'without_writeoff'
-			,'account_id' => 236
-			,'company_id' => 1
-			,'period_id' => 1
-			,'date' => $scadenza
-			,'move_id' => $acmoveid
-			,'payment_rate' => 1
-			,'amount' => 0
-		);
-		$voucherid  =$rpc->create( $voucher, "account.voucher");
-		if ($voucherid== -1){
- 			var_dump($voucher);
-			echo "\n\naccount.voucher\n\n\n";
-			die();
-		}
-		*/
+		
+		
 		
 		if($row->TIPO_CAUSA==='N'){ //NOTA DI CREDITO
-			//sync_paid_nota($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA,$totnet,$totiva,$termpag,$invoiceid,$state);
+			//Creo MOVE LINE netto
+			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totnet,80,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",-1*$totnet,1,1);
+			//Creo MOVE LINE IVA
+			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totiva,79,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",-1*	$totiva,1,1);
+			sync_paid_nota($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA,$totnet,$totiva,$termpag,$state);
+			continue;
 		}
+		
+		//Creo MOVE LINE netto
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totnet,0,80,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",$totnet,1,1,$invoiceid);
+		//Creo MOVE LINE IVA
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totiva,0,79,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",$totiva,1,1,$invoiceid);
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 42 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58 or $row->id == 114 or $row->id == 80){
 			sync_paid_immediato($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA);
 		}else{
-			sync_paid_scadenze($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$isinsoluto,$acmoveid,$state);
+			sync_paid_scadenze($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$isinsoluto,$acmoveid,$state,$invoiceid);
 		}
 
 	}
 }
 
-function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$acmoveidb,$data,$totnet,$totiva,$termpag,$invoiceid,$state){
+function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$acmoveidb,$data,$totnet,$totiva,$termpag,$state){
 	//Creo Totale
+	$reconcilied = 'none';
 	
 	$acmoveline = array(
 		'partner_id' => $partner
@@ -786,11 +662,11 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		,'date_maturity' => $scadenza
 		,'blocked' => false
 		,'create_uid' => 1
-		,'credit' => 0
-		,'journal_id' => 1
-		,'debit' => $totale
+		,'credit' => $totale
+		,'journal_id' => 3
+		,'debit' => 0
 		,'state' => 'valid'
-		,'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+		,'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
 		,'account_id' => 33
 		,'period_id' => 4
 		,'date' => $data
@@ -804,14 +680,17 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 	if ($acmovelineid== -1){
 		var_dump($acmoveline);
 		echo "\n\naccount.move.line IVA\n\n\n";
-		die();
 	}
 	
-	$acmoveid = create_account_move($rpc,$partner,"SCNJ/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'posted',"2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO",4,3);
 	
-	$notaid =create_invoice($rpc,33,"SCNJ/2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, 'nota di credito',$acmoveid,$termpag,$partner,$state,'out_refund','false', $row->numero);
 	
-	//AGGINGO righe nota di credito
+	//$acmoveid = create_account_move($rpc,$partner,"15/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'posted',"2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO",4,3);
+	
+	$notaid =create_invoice($rpc,33,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, 'nota di credito',$acmoveidb,4,$partner,$state,'out_refund','false', $row->numero,false);
+	if($notaid==-1)
+		return ;
+	
+	//AGGIUNGO righe nota di credito
 	
 	
 	
@@ -819,10 +698,8 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 	$items= mysqli_query($conn, $sql) or die("\nError 04: " . mysql_error() . "\n");
 	while($item = mysqli_fetch_object($items)){
 		$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
-		
-		
-		
-		$invoicelineid = create_account_move_line($rpc
+		if($product==-1)continue;
+		$invoicelineid = create_invoice_line($rpc
 			, empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name']
 			,$notaid
 			,132
@@ -830,146 +707,82 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 			,$partner
 			,$item->PREZZO
 			,$item->QTA);
-		
-	}
-	/*
-	$invoicelines = $rpc->searchread(array(array('invoice_id', '=', $invoiceid)),"account.invoice.line",array('name','id','product_id','partner_id','quantity','price_unit'));
-	foreach($invoicelines as $lines){
-		$line = array(
-					'uos_id' => 1
-					, 'name' => $lines['name']
-					,'invoice_id' => $notaid
-					, 'account_id' => 132
-					, 'product_id' => $lines['product_id'][0]
-					, 'company_id' => 1
-					, 'partner_id' => $lines['partner_id'][0]
-					, 'price_unit' =>  $lines['price_unit']
-					, 'quantity' => $lines['quantity']
-				);
-		$notalineid = $rpc->create( $line, "account.invoice.line");
-		if ($notalineid== -1){
-	 		var_dump($invoice);
-			echo "\n\n\n\n\n";
-			die();
-			continue;
-		}
-	}
-	*/
-	//Aggiungo righe iva nota di credito
-	$invoicelines = $rpc->searchread(array(array('invoice_id', '=', $invoiceid)),"account.invoice.tax",array('name','id','base_amount','tax_code_id','base_code_id','amount'));
-	foreach($invoicelines as $lines){
-	 	$lineiva = array(
-			'invoice_id' => $notaid
-			, 'name' => $lines['name']
-			, 'account_id' => 94
-			, 'company_id' => 1
-			, 'base_amount' =>  $lines['base_amount']
-			, 'tax_code_id' => $lines['tax_code_id'][0]
-			, 'base_code_id' => $lines['base_code_id'][0]
-			, 'amount' => $lines['amount']
-		);
-		$invoicelinetaxid = $rpc->create( $lineiva, "account.invoice.tax");
-		if ($notalineid== -1){
-	 		var_dump($invoice);
-			echo "\n\n\n\n\n";
-			die();
-			continue;
+			
+		if($item->IVA == 20){
+	 		$ivacode=53;	
+	 		$nameiva='IVA a debito 20%';
+	 	}elseif($item->IVA == 21){
+	 		$ivacode=55;
+	 		$nameiva='IVA a debito 21%';	
+	 	}elseif($item->IVA == 4){
+	 		$ivacode=57;
+	 		$nameiva='IVA a debito 4%';	
+	 	}elseif($item->IVA == 10){
+	 		$ivacode=51;
+	 		$nameiva='IVA a debito 10%';	
+	 	}elseif($item->IVA == 22){
+	 		$ivacode=79;	
+	 		$nameiva='IVA a debito 22%';
+	 	}elseif($item->IVA == '' or $item->IVA =='NS26' or $item->IVA =='N41V') { 
+	 		$item->IVA == '';
+	 	}else{
+	 		echo "errore sul'iva";
+	 		var_dump($item->IVA);
+	 		echo "\n\n\n\n\n";
+	 	}
+	 	
+	 	if($item->IVA !== ''){	
+	 		$invoicelinetaxid =create_invoice_tax($rpc,$nameiva,$notaid,94,$item->PREZZO,$ivacode,($ivacode - 1),round((($item->PREZZO *  $item->QTA) * $item->IVA /100 ),2));
 		}
 	}
 	
 	
+	if($state==='paid'){
+		$acmovereconcile= array(
+			'opening_reconciliation' => false
+			,'type' => 'auto'
+		);
+		$acmovereconcileid= $rpc->create( $acmovereconcile, "account.move.reconcile");
+		if ($acmovereconcileid== -1){
+			var_dump($acmovereconcile);
+			echo "\n\naccount.move.reconcile\n\n\n";
+			die();
+		}
 	
-	$acmovereconcile= array(
-		'opening_reconciliation' => false
-		,'type' => 'auto'
-	);
-	$acmovereconcileid= $rpc->create( $acmovereconcile, "account.move.reconcile");
-	if ($acmovereconcileid== -1){
-		var_dump($acmovereconcile);
-		echo "\n\naccount.move.reconcile\n\n\n";
-		die();
-	}
-	$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_id' => $acmovereconcileid),'account.move.line');
-	//Creo netto
-	$acmoveline = array(
-		'partner_id' => $partner
-		,'company_id' => 1
-		, 'blocked' => false
-		, 'create_uid' => 1
-		, 'credit' => 0
-		, 'debit' => $totnet
-		, 'journal_id' => 1
-		, 'tax_code_id' => 80
-		, 'state' => 'valid'
-		, 'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
-		, 'account_id' => 132
-		, 'period_id' => 4
-		, 'date' => $row->DATA
-		, 'move_id' => $acmoveid
-		, 'name' => "2015/$counter totale"
-		, 'tax_amount' => -1*$totnet
-		, 'quantity' => 1
-	);
-	$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-	if ($acmovelineid== -1){
-		var_dump($acmoveline);
-		echo "\n\naccount.move.line TOT\n\n\n";
-		die();
-	}
-	//Creo IVA
-	$acmoveline = array(
-		'partner_id' => $partner
-		,'company_id' => 1
-		, 'blocked' => false
-		, 'create_uid' => 1
-		, 'credit' => 0
-		, 'debit' => $totiva
-		, 'journal_id' => 3
-		, 'tax_code_id' => 79
-		, 'state' => 'valid'
-		, 'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
-		, 'account_id' => 94
-		, 'period_id' => 4
-		, 'date' => $row->DATA
-		, 'move_id' => $acmoveid
-		, 'name' => "2015/$counter IVA"
-		, 'tax_amount' => -1*$totiva
-		, 'quantity' => 1
-		);
-	$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-	if ($acmovelineid== -1){
-		var_dump($acmoveline);
-		echo "\n\naccount.move.line TOT\n\n\n";
-		die();
-	}
-	$acmoveline = array(
-		'partner_id' => $partner
-		,'company_id' => 1
-		,'date_maturity' => $scadenza
-		,'blocked' => false
-		,'create_uid' => 1
-		,'credit' => $totale
-		,'journal_id' => 1
-		,'debit' => 0
-		,'reconcile_id' => $acmovereconcileid
-		,'state' => 'valid'
-		,'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
-		,'account_id' => 33
-		,'period_id' => 4
-		,'date' => $data
-		,'move_id' => $acmoveid
-		,'name' => "/"
-		,'tax_amount' => 0
-		,'quantity' => 1
-		);
+		$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_id' => $acmovereconcileid),'account.move.line');
+		$reconcilied=$acmovereconcileid;
 		
-	$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-	if ($acmovelineid== -1){
-		var_dump($acmoveline);
-		echo "\n\naccount.move.line IVA\n\n\n";
-		die();
+		$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,7);
+		//Creo netto
+		$acmovelineid = create_account_move_line($rpc,$partner,$totnet,0,80,'valid'
+			,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
+			,132
+			,$row->DATA
+			,$acmoveid
+			,"15/$counter totale"
+			,0
+			,1
+			,7
+			);
+		
+		//Creo IVA
+		$acmovelineid = create_account_move_line($rpc,$partner,$totiva,0,79,'valid'
+			,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
+			,94
+			,$row->DATA
+			,$acmoveid
+			,"15/$counter IVA"
+			,0
+			,1
+			,7);
+	
+		//Creo storno
+		$acmovelineid =create_account_move_line($rpc,$partner,0,$totale,'','valid'
+		,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . " NOTA DI CREDITO"
+		,33
+		,$data
+		,$acmoveid,'/',0,1,1,$notaid,$acmovereconcileid,$scadenza);
 	}
-
 }
 
 function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$acmoveid,$data){
@@ -984,7 +797,7 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 		,'journal_id' => 1
 		,'debit' => $totale
 		,'state' => 'valid'
-		,'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+		,'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
 		,'account_id' => 33
 		,'period_id' => 4
 		,'date' => $data
@@ -998,7 +811,6 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 	if ($acmovelineid== -1){
 		var_dump($acmoveline);
 		echo "\n\naccount.move.line IVA\n\n\n";
-		die();
 	}
 	$acmovereconcile= array(
 		'opening_reconciliation' => false
@@ -1063,167 +875,128 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 			echo "\n\n paid_immediato account.move.line scadenza\n\n\n";
 			die();
 		}
-	/*
-	$voucher = array(
-		'comment' => "Write-Off"
-		,'is_multi_currency' => false
-		,'journal_id' => $row->id==1?7:8
-		,'partner_id' => $partner
-		,'payment_rate_currency_id' => 1
-		,'create_uid' => 1
-		,'state' => 'posted'
-		,'number' => "BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
-		,'pre_line' => true
-		,'type' => 'receipt'
-		,'payment_option' => 'without_writeoff'
-		,'account_id' => $row->id==1?235:236
-		,'company_id' => 1
-		,'period_id' => 4
-		,'date' => $scadenza
-		,'move_id' => $acmoveid
-		,'payment_rate' => 1
-		,'amount' => $totale
-	);
-	$voucherid  =$rpc->create( $voucher, "account.voucher");
-	if ($voucherid== -1){
-		var_dump($voucher);
-		echo "\n\naccount.voucher\n\n\n";
-		die();
-	}
- 	$voucherline= array(
-		'create_uid' => 1
-		,'reconcile' => true
-		,'name' => ''
-		,'amount_unreconciled' => $totale
-		,'type' => 'cr'
-		,'company_id' => 1
-		,'voucher_id' => $voucherid
-		,'amount' => $totale
-		,'amount_original' => $totale
-		,'move_line_id' => $acmovelineid
-		,'account_id' => 33
-	);
-	$voucherlineid = $rpc->create( $voucherline, "account.voucher.line");
-		if ($voucherlineid== -1){
-		var_dump($voucherline);
-		echo "\n\naccount.voucher.line\n\n\n";
-		die();
-		}
-	*/
 	return;
 
 }
 
-function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsoluto,$acmoveid,$state){
-	$sql="SELECT * FROM odoo.scadenze  WHERE NUM_DOC =". $row->numero."  AND DATA_DOC = \"".$row->DATA ."\"AND DATA_SCAD < NOW() ORDER by DATA_DOC desc;";
+function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsoluto,$acmoveid,$state,$invoiceid){
+	//$sql="SELECT * FROM odoo.scadenze  WHERE NUM_DOC =". $row->numero."  AND DATA_DOC = \"".$row->DATA ."\"AND DATA_SCAD < NOW() ORDER by DATA_DOC desc;";
+	$sql="SELECT * FROM odoo.scadenze  WHERE NUM_DOC =". $row->numero."  AND DATA_DOC = \"".$row->DATA ."\"";
 	$saldo=$totale;
 	$result= mysqli_query($conn, $sql) or die("\nError 02: " . mysql_error() . "$sql\n");
 	while($ribarow = mysqli_fetch_object($result)){
-		if($ribarow->CAUSALE === 'Ric. Bancaria' or $ribarow->CAUSALE ==='Rimessa Diretta' or $ribarow->CAUSALE==='Bonifico Banc.' or $ribarow->CAUSALE==='Fattura contrass.'){
-			/*
-			$acmovereconcile= array(
-				,'opening_reconciliation' => false
-				,'type' => 'auto'
-				);
-			$acmovereconcileid= $rpc->create( $acmovereconcile, "account.move.reconcile");
-			if ($acmovereconcileid== -1){
-				var_dump($acmovereconcile);
-				echo "\n\naccount.move.reconcile\n\n\n";
-				die();
-			}
-			*/
-			$acmoveline = array(
-				'partner_id' => $partner
-				,'company_id' => 1
-				, 'blocked' => false
-				, 'create_uid' => 1
-				, 'credit' => 0
-				, 'journal_id' => 1
-				, 'debit' => $ribarow->IMPORTO
-				, 'state' => 'valid'
-				, 'ref' => "2015/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
-				, 'account_id' => 33
-				, 'period_id' => 4
-				, 'date_maturity' => $ribarow->DATA_SCAD
-				, 'date' => $row->DATA
-				, 'move_id' => $acmoveid
-				, 'name' => "/"
-				, 'tax_amount' => 0
-				, 'quantity' => 1
-			);
-			$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-				if ($acmovelineid== -1){
-		 			var_dump($acmoveline);
-					echo "\n\npaid_scadenze account.move.line scadenza\n\n\n";
-					die();
-	 			}
+		if($ribarow->CAUSALE === 'Ric. Bancaria' or $ribarow->CAUSALE ==='Rimessa Diretta' or $ribarow->CAUSALE==='Bonifico Banc.' or $ribarow->CAUSALE==='Fattura contrass.' or $ribarow->CAUSALE==='INSOLUTO'){
+		    if($ribarow->CAUSALE!='INSOLUTO' ){
+			    $acmoveline = array(
+				    'partner_id' => $partner
+				    ,'company_id' => 1
+				    , 'blocked' => false
+				    , 'create_uid' => 1
+				    , 'credit' => 0
+				    , 'journal_id' => 1
+				    , 'debit' => $ribarow->IMPORTO
+				    , 'state' => 'valid'
+				    , 'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+				    , 'account_id' => 33
+				    , 'period_id' => 4
+				    , 'date_maturity' => $ribarow->DATA_SCAD
+				    , 'date' => $row->DATA
+				    , 'move_id' => $acmoveid
+				    , 'name' => "/"
+				    , 'tax_amount' => 0
+				    , 'quantity' => 1
+			    );
+			    $acmovelineid= $rpc->create( $acmoveline, "account.move.line");
+				    if ($acmovelineid== -1){
+		     			var_dump($acmoveline);
+					    echo "\n\npaid_scadenze account.move.line scadenza\n\n\n";
+	     			}
+	     	}
 	 		if(($ribarow->PAGATO === 'P' and $ribarow->CAUSALE != 'INSOLUTO') or ($ribarow->PAGATO === 'C' and $ribarow->CAUSALE === 'INSOLUTO')){
-				$acmovereconcile= array(
-					'opening_reconciliation' => false
-					,'type' => 'auto'
-				);
-				$acmovereconcileid= $rpc->create( $acmovereconcile, "account.move.reconcile");
-				if ($acmovereconcileid== -1){
-					var_dump($acmovereconcile);
-					echo "\n\naccount.move.reconcile\n\n\n";
-					die();
-				}
-				$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_ref' => "A$counter", 'reconcile_id' => $acmovereconcileid),'account.move.line');
-				
-				
-				
-				$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,7);
-				
-				$acmoveline = array(
-					'partner_id' => $partner
-					,'company_id' => 1
-					, 'blocked' => false
-					, 'create_uid' => 1
-					, 'credit' => 0
-					, 'journal_id' => 7
-					, 'debit' => $totale
-					, 'state' => 'valid'
-					, 'ref' => "BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT)
-					, 'account_id' => 235
-					, 'period_id' => 4
-					, 'date' => $row->DATA
-					, 'move_id' => $acmoveid
-					, 'name' => "/"
-					, 'tax_amount' => 0
-				);
-				$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-					if ($acmovelineid== -1){
-						var_dump($acmoveline);
-						echo "\n\npaid_immediato account.move.line scadenza\n\n\n";
+	 			
+	 			$acmovereconcileid='none';
+	 			if(time() - strtotime($ribarow->DATA_SCAD) > 60*60*24) {
+					$acmovereconcile= array(
+						'opening_reconciliation' => false
+						,'type' => 'auto'
+					);
+					$acmovereconcileid= $rpc->create( $acmovereconcile, "account.move.reconcile");
+					if ($acmovereconcileid== -1){
+						var_dump($acmovereconcile);
+						echo "\n\naccount.move.reconcile\n\n\n";
 						die();
 					}
+					$rpc->write(array($acmovelineid),array('reconcile_ref' => "A$counter", 'reconcile_id' => $acmovereconcileid),'account.move.line');
+				
+				
+				
+					$acmove_id = create_account_move($rpc,$partner,"Ri.Ba. 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'posted',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,8);
+				
 					$acmoveline = array(
-					'partner_id' => $partner
-					,'company_id' => 1
-					, 'blocked' => false
-					, 'create_uid' => 1
-					, 'credit' => $totale
-					, 'journal_id' => 7
-					, 'debit' => 0
-					//, 'reconcile_ref' => "A$counter"
-					, 'state' => 'valid'
-					, 'ref' => "BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT)
-					, 'account_id' => 33
-					, 'period_id' => 4
-					, 'date' => $row->DATA
-					, 'move_id' => $acmoveid
-					, 'reconcile_id' => $acmovereconcileid
-					, 'name' => "/"
-					, 'tax_amount' => 0
-					, 'quantity' => 1
-				);
-				$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
-					if ($acmovelineid== -1){
-						var_dump($acmoveline);
-						echo "\n\n paid_immediato account.move.line scadenza\n\n\n";
-						die();
+						'partner_id' => $partner
+						,'company_id' => 1
+						, 'blocked' => false
+						, 'create_uid' => 1
+						, 'credit' => $ribarow->IMPORTO
+						, 'journal_id' => 8
+						, 'debit' => 0
+						, 'state' => 'valid'
+						, 'ref' => "Ri.Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+						, 'account_id' => 237
+						, 'period_id' => 4
+						, 'date' => $row->DATA
+					
+						, 'reconcile_ref' => "A$acmovereconcileid"
+						, 'reconcile_id' => $acmovereconcileid
+						, 'move_id' => $acmove_id
+						, 'name' => "15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+						, 'tax_amount' => 0
+					);
+					$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
+						if ($acmovelineid== -1){
+							var_dump($acmoveline);
+							echo "\n\npaid_Scadenze account.move.line scadenza\n\n\n";
+						}
+					if($acmovereconcileid!='none'){
+						$acmoveline = array(
+							'partner_id' => $partner
+							,'company_id' => 1
+							, 'blocked' => false
+							, 'create_uid' => 1
+							, 'credit' => 0
+							, 'journal_id' => 8
+							, 'debit' => $ribarow->IMPORTO
+							, 'state' => 'valid'
+							, 'ref' => "Ri.Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+							, 'account_id' => 237
+							, 'period_id' => 4
+							, 'date' => $row->DATA
+							, 'date_maturity' => $ribarow->DATA_SCAD
+							, 'move_id' => $acmove_id
+							, 'name' => "Ri. Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+							, 'tax_amount' => 0
+							, 'day' => $ribarow->DATA_SCAD
+						);
+						$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
+							if ($acmovelineid== -1){
+								var_dump($acmoveline);
+								echo "\n\npaid_Scadenze account.move.line scadenza\n\n\n";
+								die();
+							}
 					}
-				 		
+					else
+					{
+						echo "reconcilied uguale a none \n";
+						create_account_move_line($rpc,$partner,0,$ribarow->IMPORTO,'','valid',"BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT),'237',$row->DATA,$acmove_id,'/',0,1,8,$invoiceid, 'none',$ribarow->DATA_SCAD);
+					}
+				}		
+	 		}else{
+	 		    echo "Riba non pagata\n";
+	 		    $tmp= $rpc->search(array(array('move_id', '=', $acmoveid),array('reconcile_id', '!=', '')),"account.move.line");
+	 			$rpc->write(array($invoiceid),array('state'=>'open', 'is_unsolved' => true, 'reconciled' => false),'account.invoice');
+	 			$query= "INSERT INTO invoice_unsolved_line_rel VALUES (" . $tmp[0] .",". $invoiceid." );\n";
+	 			file_put_contents('query.txt', $query, FILE_APPEND);
+	 			#$rpc->write(array($invoiceid),array('unsolved_move_line_ids' => array($tmp[0])),'account.invoice');
 	 		}
 		 	$saldo=$saldo-$ribarow->IMPORTO;
 		}
@@ -1250,10 +1023,29 @@ function sync_articoli(&$conn,&$rpc){
 			 fornitori.RAG_SOC as fornitore,
 			 ALIQUOTA as aliquota,
 			 GRUPPO as gruppo,
-			 BARCODE1 as barcode FROM odoo.articoli left JOIN odoo.fornitori on fornitori.MMCC = MMCC_FORAB AND fornitori.SSSS = SSSS_FORAB left JOIN odoo.artpagc ON articoli.codice = artpagc.CODICE;";
+			 artpagc.NOTE1 as note1,
+			 artpagc.NOTE2 as note2,
+			 artpagc.NOTE3 as note3,
+			 artpagc.NOTE4 as note4,
+			 artpagc.NOTE5 as note5,
+			 artpagc.COSTOCOMAG as costocomag,
+			 artpagc.TIPOSCONTO as tiposconto,
+			 artpagc.SCONTO1 as sconto1,
+			 artpagc.SCONTO2 as sconto2,
+			 artpagc.SCONTO3 as sconto3,
+			 artpagc.PZOMAGGIO as pezziomaggio,
+			 artpagc.OMAGGIOGNI as omaggiogni,
+			 BARCODE1 as barcode FROM odoo.articoli left JOIN odoo.fornitori on fornitori.MMCC = MMCC_FORAB AND fornitori.SSSS = SSSS_FORAB left JOIN odoo.artpagc ON articoli.codice = artpagc.CODICE";
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
 	{
+	$notefornitore = "";
+	if($row->tiposconto == 1){
+	    //SCONTO
+	    $notefornitore= "Costo finale dato da " . $row->prezzolistino . " - " . $row->sconto1 . "% - " . $row->sconto2 . "% - " . $row->sconto3 . "% \n pezzi omaggio: " . $row->pezziomaggio . " ogni "  . $row->omaggiogni;
+	}
+	$note=$row->note1 . "\n" . $row->note2 . "\n" . $row->note3 . "\n" . $row->note4 . "\n" . $row->note5 . "\n";
+	
 	//Cerco l'id del fornitore
 	$idfornitore = $rpc->search(array(array('name', '=', $row->fornitore),array('supplier', '=', true)),"res.partner");
 		//Cerco l'id del gruppo
@@ -1273,12 +1065,15 @@ function sync_articoli(&$conn,&$rpc){
 			, 'type' => 'product'
 			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
 			,'ean13'=>$row->barcode
-			, 'description' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+			, 'description' =>  $note
 		 	, 'default_code' => $row->codice
 		 	, 'list_price' => str_replace(',', '.', $row->prezzolistino)
 		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
+		 	, 'qty_available' => 10000
+		 	, 'virtual_available' => 10000
 		 	, 'seller_qty' => 1
 		 	, 'seller_delay' => 1
+		 	, 'description_purchase' => $notefornitore
 		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
 
 	 	);
@@ -1291,12 +1086,15 @@ function sync_articoli(&$conn,&$rpc){
 			, 'type' => 'product'
 			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
 			,'ean13'=>$row->barcode
-			, 'description' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+			, 'description' =>  $note
 		 	, 'default_code' => $row->codice
 		 	, 'list_price' => str_replace(',', '.', $row->prezzonetto)
 		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
+		 	, 'qty_available' => 10000
+		 	, 'virtual_available' => 10000
 		 	, 'seller_qty' => 1
 		 	, 'seller_delay' => 1
+		 	, 'description_purchase' => $notefornitore
 		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
 
 		 	);
@@ -1309,12 +1107,15 @@ function sync_articoli(&$conn,&$rpc){
 			, 'type' => 'product'
 			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
 			,'ean13'=>$row->barcode
-			, 'description' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+			, 'description' =>  $note
 		 	, 'default_code' => $row->codice
 		 	, 'list_price' => str_replace(',', '.', $row->prezzofinale)
 		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
 		 	, 'seller_qty' => 1
+		 	, 'qty_available' => 10000
+		 	, 'virtual_available' => 10000
 		 	, 'seller_delay' => 1
+		 	, 'description_purchase' => $notefornitore
 		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
 		 	);
 	 	}else{
@@ -1334,47 +1135,98 @@ function sync_articoli(&$conn,&$rpc){
 		}	 	
 	 	
 	 	if(!empty($idfornitore)){
-	 	$fornitore= array(
-	 	  'product_tmpl_id' => $articoli
-	 	, 'name' => $idfornitore[0]
-	 	, 'product_code' => $row->codforn );
-	 	$fornitori= $rpc->create( $fornitore, "product.supplierinfo");
-	 	if ($fornitori == -1){
-	 		echo "fornitore";
-	 		var_dump($fornitore);
+	     	$fornitore= array(
+	     	  'product_tmpl_id' => $articoli
+	     	, 'name' => $idfornitore[0]
+	     	, 'product_code' => $row->codforn );
+	     	$fornitori= $rpc->create( $fornitore, "product.supplierinfo");
+	     	if ($fornitori == -1){
+	     		echo "fornitore";
+	     		var_dump($fornitore);
+	     		die();
+	     	}
+	 	}
+	 	$articolo = $rpc->search(array(array('product_tmpl_id', '=',$articoli)),"product.product");
+	 	$quantity=array(
+	 	 'location_id' =>12
+	 	, 'lot_id'=> False
+	 	, 'new_quantity'=> 10000
+	 	, 'product_id'=> $articolo[0]
+	 	);
+	 	$qty= $rpc->create( $quantity, "stock.change.product.qty");
+	 	if ($qty == -1){
+	 		echo "quantità";
+	 		var_dump($quantity);
 	 		die();
 	 	}
-	 	
-	 	
-	 	
-	 	}
-	 	if($row->condizione==4){
-	 		//somma percentuale
-	 		$sconto=$row->scontocliente/100;
-	 	}else{
-	 		//sottrai percentuale
-	 		$sconto=-1*($row->scontocliente/100);
-	 	
-	 	}
-	 	/*
-	 	$pricelists=array(
-	 		'name'=>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-	 		, 'price_version_id' => $listver
-	 		, 'product_tmpl_id' => $articoli
-	 		, 'base' => 1
-	 		, 'price_discount' => $sconto
-	 		);
-	 	$pricelist= $rpc->create( $pricelists, "product.pricelist.item");
-	 	if ($pricelist== -1){
-	 		echo "price list";
-	 		var_dump($pricelists);
+	 	$inventory=array(
+	 	 'company_id' => 1
+	 	,'filter' =>'product'
+	 	, 'location_id' =>12
+	 	, 'name' =>'INV: '.preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+	 	, 'state' => 'done'
+	 	, 'product_id'=> $articolo[0]
+	 	);
+	 	$inventoryid= $rpc->create( $inventory, "stock.inventory");
+	 	if ($inventoryid == -1){
+	 		echo "inventory";
+	 		var_dump($inventory);
 	 		die();
 	 	}
-	 	*/
-	 	
-	 }	
+	 	$inventoryline=array(
+	 	 'company_id' => 1
+	 	,'location_name' =>'Physical Locations / WH / Stock'
+	 	, 'location_id' =>12
+	 	, 'product_name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+	 	, 'inventory_id' => $inventoryid
+	 	, 'product_qty' => 10000
+	 	, 'product_uom_id' => 1
+	 	, 'product_id'=> $articolo[0]
+	 	, 'product_code' => $row->codice
+	 	);
+	 	$inventorylineid= $rpc->create( $inventoryline, "stock.inventory.line");
+	 	if ($inventorylineid == -1){
+	 		echo "inventory";
+	 		var_dump($inventorylineid);
+	 		die();
+	 	}
+	 	$stockmove=array(
+	 	  'company_id' => 1
+	 	//, 'date_expected' => time()
+	 	//, 'date' => time()
+	 	, 'invoice_state' => 'none'
+	 	, 'location_dest_id' => 12
+	 	, 'location_id' =>5
+	 	, 'product_uom' => 1
+	 	, 'inventory_id' =>$inventoryid
+	 	, 'state' => 'done'
+	 	, 'product_uom_qty' => 10000
+	 	, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+	 	, 'procure_method' => 'make_to_stock'
+	 	, 'product_id'=> $articolo[0]
+	 	);
+	 	$smoveid= $rpc->create( $stockmove, "stock.move");
+	 	if ($smoveid == -1){
+	 		echo "smoveid";
+	 		var_dump($stockmove);
+	 		die();
+	 	}
+	 	$stokquant=array(
+	 	 'company_id' => 1
+	 	,'qty' => 10000
+	 	, 'cost' => str_replace(',', '.', $row->prezzofinale)
+	 	, 'location_id' => 12
+	 	, 'product_id' => $articolo[0]
+	 	);
+	 	$stokquantid= $rpc->create( $stokquant, "stock.quant");
+	 	if ($stokquantid == -1){
+	 		echo "inventory";
+	 		var_dump($stokquant);
+	 		die();
+	 	}
+	 }
+}	
 
-}
 
 
 function sync_gruppi(&$conn,&$rpc){
@@ -1412,6 +1264,27 @@ function create_bank_account(&$conn,&$rpc,$id,$userid,$iban ){
 	$bankid = $rpc->create( $bank, "res.partner.bank");
 }
 
+function create_invoice_tax(&$rpc,$nameiva,$invoiceid,$account_id,$base_amount,$tax_code_id,$base_code_id,$amount){
+	$company_id = 1;
+	$lineiva = array(
+		'invoice_id' => $invoiceid
+		, 'name' => $nameiva
+		, 'account_id' => $account_id
+		, 'company_id' => $company_id
+		, 'base_amount' =>  $base_amount
+		, 'tax_code_id' => $tax_code_id
+		, 'base_code_id' => $base_code_id
+		, 'amount' => $amount
+	);
+	$invoicelinetaxid = $rpc->create( $lineiva, "account.invoice.tax");
+	if ($invoicelinetaxid== -1){
+		echo "errore sul inserimento iva\n";
+		echo "\n\n\n\n\n";
+ 	}else{
+ 	return $invoicelinetaxid;
+ 	}
+}
+
 function create_account_move(&$rpc,$partner,$name,$date,$state='posted',$ref='',$period_id=4,$journal_id=1){
 	$acmove = array(
 			'partner_id' => $partner
@@ -1420,7 +1293,7 @@ function create_account_move(&$rpc,$partner,$name,$date,$state='posted',$ref='',
 			, 'period_id' => $period_id
 			, 'journal_id' => $journal_id
 			, 'date' => $date
-			, 'ref' => $ref=""
+			, 'ref' => $ref
 		);
 		$acmoveid= $rpc->create( $acmove, "account.move");
 		if ($acmoveid== -1){
@@ -1431,7 +1304,72 @@ function create_account_move(&$rpc,$partner,$name,$date,$state='posted',$ref='',
 		}
 }
 
-function create_account_move_line(&$rpc,$name,$invoiceid,$account_id,$product_id,$partner,$price,$quantity){
+
+function create_account_move_line(&$rpc,$partner,$credit,$debit,$tax_code_id,$state,$ref,$account_id,$date,$acmoveid,$name,$tax_amount,$quantity,$journal_id,$invoice_id='',$reconcilied = "none",$date_maturity=''){
+	$company_id = 1;
+	$period_id = 4;
+	
+	if($reconcilied==='none'){
+		$acmoveline = array(
+			'partner_id' => $partner
+			,'company_id' => $company_id
+			, 'blocked' => false
+			, 'create_uid' => 1
+			, 'credit' => $credit
+			, 'debit' => $debit
+			, 'journal_id' => $journal_id
+			, 'tax_code_id' => $tax_code_id
+			, 'state' => $state
+			, 'ref' => $ref 
+			, 'account_id' => $account_id
+			, 'period_id' => $period_id
+			, 'date' => $date
+			, 'move_id' => $acmoveid
+			, 'name' => $name
+			, 'tax_amount' => $tax_amount
+			, 'quantity' => 1
+			, 'stored_invoice_id' => $invoice_id
+			, 'day' => $date_maturity
+		);
+	}else{
+		$acmoveline = array(
+			'partner_id' => $partner
+			,'company_id' => $company_id
+			, 'blocked' => false
+			, 'create_uid' => 1
+			,  'date_maturity' => $date_maturity
+			, 'credit' => $credit
+			, 'debit' => $debit
+			, 'journal_id' => 1
+			, 'tax_code_id' => $tax_code_id
+			, 'reconcile_ref' => 'A'.$reconcilied
+			, 'reconcile_id' => $reconcilied
+			, 'state' => $state
+			, 'ref' => $ref 
+			, 'account_id' => $account_id
+			, 'period_id' => $period_id
+			, 'date' => $date
+			, 'move_id' => $acmoveid
+			, 'name' => $name
+			, 'tax_amount' => $tax_amount
+			, 'quantity' => 1
+			, 'stored_invoice_id' => $invoice_id
+			, 'day' => $date_maturity
+		);
+	
+	
+	}
+	$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
+	if ($acmovelineid== -1){
+		var_dump($acmoveline);
+		echo "\n\naccount.move.line TOT\n\n\n";
+	}else{
+		return $acmovelineid;
+	}
+}
+
+
+function create_invoice_line(&$rpc,$name,$invoiceid,$account_id,$product_id,$partner,$price,$quantity){
 	$uos_id = 1;
 	$company_id = 1;
 	
@@ -1452,7 +1390,6 @@ function create_account_move_line(&$rpc,$name,$invoiceid,$account_id,$product_id
 			echo "errore sul inseriment linea fattura\n";
 	 		var_dump($line);
 	 		echo "\n\n\n\n\n";
-	 		die();
 	 	}else{
 	 		return $invoicelineid;
 	 	
@@ -1461,7 +1398,7 @@ function create_account_move_line(&$rpc,$name,$invoiceid,$account_id,$product_id
 
 
 
-function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$acmoveid,$termpag,$partner,$state='posted',$type='out_invoice',$reconcilied = 'false', $comment='',$journal_id=1){
+function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$acmoveid,$termpag,$partner,$state='posted',$type='out_invoice',$reconcilied = 'false', $comment='', $is_unsolved, $journal_id=1){
 	$company_id = 1;
 	$currency_id = 1;
 	$fiscal_position =1;
@@ -1488,14 +1425,16 @@ function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$
 			, 'reconciled' => $reconcilied
 			, 'user_id' => $user_id
 			, 'comment' => $comment
+			, 'is_unsolved' => $is_unsolved
 		);
 	$invoiceid = $rpc->create( $invoice, "account.invoice");
 		if ($invoiceid== -1){
 			var_dump($invoice);
+			echo "Function creo fattura";
 			echo "\n\n\n\n\n";
-		}else{
-		return $invoiceid;
+			return -1;
 		}
+		return $invoiceid;
 }
 
 ?>
