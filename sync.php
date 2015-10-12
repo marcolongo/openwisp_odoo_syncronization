@@ -44,20 +44,20 @@ function sync_operator(&$conn,&$rpc){
     echo "Sincronizzo operatori \n";
     $operator=include('config.operator.php');
     foreach($operator as $key => $value)
-   	{
+    {
     	$sql="SELECT * FROM `operator_users` WHERE `operator_id` =". $key;
     	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
     	while($row = mysqli_fetch_object($ids))
         {
-    		if ($row->user_id=="") continue;
-            $sql="\nSELECT * FROM `user_openwisp_odoo` WHERE `uid_openwisp_id` =". $row->user_id;
-    		$result= mysqli_query($conn, $sql) or die("\nError 01: " . $conn->error . "\n");
-    		if($result->num_rows>0){
-    			$resuser=mysqli_fetch_object($result);
-    			$userid = $rpc->write(array($resuser->uid_odoo_id),array('user_id'=>$value),"res.partner" );
-    		}		
-   		}
+	    	if ($row->user_id=="") continue;
+	    	$sql="\nSELECT * FROM `user_openwisp_odoo` WHERE `uid_openwisp_id` =". $row->user_id;
+	    	$result= mysqli_query($conn, $sql) or die("\nError 01: " . $conn->error . "\n");
+	    	if($result->num_rows>0){
+	    		$resuser=mysqli_fetch_object($result);
+	    		$userid = $rpc->write(array($resuser->uid_odoo_id),array('user_id'=>$value),"res.partner" );
+	    	}		
    	}
+   }
 }
 
 
