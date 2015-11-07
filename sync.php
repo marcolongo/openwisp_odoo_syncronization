@@ -18,10 +18,289 @@ https://www.odoo.com/documentation/8.0/api_integration.html#connection
 
 include_once('openerp.class.php');
 
+
+ini_set('log_errors', true);
+ini_set('error_log', dirname(__FILE__).'/errors.log');
+
+
 $config = include('config.php');
 $listver; 
 
+class res_partner {
+	
+	private $DEBUGNAME='res_partner';
+	
+	//table colunms
+	var $id;
+	private $name = "";
+	private $city = "";
+	private $contact_address = "";
+	public  $customer = true;
+	public $supplier = false;
+	private $display_name = "";
+	var $employee ="";
+	private $vat ="";
+	var $is_company;
+	var $lang = "it_IT";
+	private  $phone = "";
+	private  $mobile = "";
+	private  $street = "";
+	private $user_id;
+	private $fiscalcode = "";
+	var $type = 'contact';
+	var $tz = 'Europe/Rome';
+	var $tz_offset = '+0100';
+	private  $zip = "00000";
+	var $credit_limit = 10000;
+	var $country_id = 110;
+	var $state_id = 110;
+	var $property_account_receivable;
+	var $property_account_position = 1;
+	private $property_payment_term;
+	var $comment;
+	
+	function set_name($name){
+		$this->name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_city($name){
+		$this->city= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_contact_address($name){
+		$this->contact_address= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_display_name($name){
+		$this->display_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_vat($name){
+		$this->vat= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_fiscalcode($name){
+		$this->fiscalcode= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_phone($name){
+		if(is_numeric($name)){
+			$this->phone= $name;
+		}else{
+			error_log("{$this->name}: has not numeric phone number: $name \n");
+		}
+	}
+	
+	function set_mobile($name){
+		if(is_numeric($name)){
+			$this->mobile= $name;
+		}else{
+			error_log("{$this->name}: has not numeric phone number: $name \n");
+		}
+	}
+	
+	function set_street($name){
+		$this->street= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_user_id($name){
+		if(is_numeric($name)){
+			$this->user_id= $name;
+		}else{
+			error_log("{$this->name}: has not numeric user id: $name \n");
+		}
+	}
+	
+	function set_zip($name){
+		if (preg_match('/^\d{5}$/', $name)) {
+			$this->zip= $name;
+		} else {
+			error_log("{$this->name}: has not invalid zip code: $name \n");
+		}
+	}
+	
+	function set_property_payment_term($name){
+		$this->property_payment_term= 'account.payment.term,'.name;
+	}
+	
+	function set_comment($name){
+		$this->comment= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	
+	function return_array(){
+		return array(
+			 'name'=> $this->name
+			, 'city' => $this->city
+			, 'contact_address' => $this->contact_address
+			, 'customer' => $this->customer
+			, 'supplier' => $this->supplier
+			, 'display_name' => $this->display_name
+			, 'employee' => $this->employee
+			, 'vat' => $this->vat
+			, 'fiscalcode' => $this->fiscalcode
+			, 'is_company' => $this->is_company
+			, 'lang' => $this->lang
+			, 'phone' => $this->phone
+			, 'mobile' => $this->mobile
+			, 'street' => $this->street
+			, 'user_id' => $this->user_id
+			, 'type' => $this->type
+			, 'tz' => $this->tz
+			, 'tz_offset' => $this->tz_offset
+			, 'zip' => $this->zip
+			, 'credit_limit' => $this->credit_limit
+			, 'country_id' => $this->country_id
+			, 'state_id' => $this->street
+			, 'property_account_receivable' => $this->property_account_receivable
+			, 'property_account_position' => $this->property_account_position
+			, 'property_payment_term' => $this->property_payment_term
+			, 'comment' => $this->comment		
+		);
+	}
+	
+	function write(&$rpc){
+		$userid = $rpc->create( $this->return_array(), "res.partner");
+		if ($userid== -1){
+			$this->vat= "";
+			$userid = $rpc->create( $this->return_array(), "res.partner");
+			if ($userid== -1){
+				error_log($DEBUGNAME . "{$this->name} errore inserimento \n");
+				error_log(print_r($this,true));
+				die();
+			}
+		}
+		$this->id=$userid;
+	}
+}
 
+
+class res_partner_bank{
+	private $DEBUGNAME='res_partner.bank';
+	
+	var $id;
+	private  $owner_name;
+	private $street;
+	var $name = '/';
+	private $city;
+	private $partner_id;
+	private  $bank_name;
+	private  $bank;
+	private  $acc_number;
+	var $bank_cab;
+	var $bank_abi;
+	var $state = 'bank';
+	
+	function return_array(){
+		return array(
+			'owner_name' => $this->owner_name
+			,'street' => $this->street
+			,'name' => $this->name
+			,'city' => $this->city
+			,'partner_id' => $this->partner_id
+			,'bank_name' => $this-> bank
+			,'bank' => $this->bank
+			,'acc_number' => $this->acc_number
+			,'bank_cab' => $this->bank_cab
+			,'bank_abi' => $this->bank_abi
+			,'state' => $this->state
+		);
+	}
+	
+	function set_owner_name($name){
+		$this->owner_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_street($name){
+		$this->street= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_city($name){
+		$this->city= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_partner_id($name){
+		if(is_numeric($name)){
+			$this->partner_id= $name;
+		}else{
+			error_log($DEBUGNAME . "{$this->owner_name}: has not numeric partner id: $name \n");
+		}
+	}
+	
+	function set_bank_name($name){
+		$this->bank_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_bank($name){
+	if(is_numeric($name)){
+			$this->bank= $name;
+		}else{
+			error_log($DEBUGNAME . "{$this->owner_name}: has not numeric bank: $name \n");
+		}
+	}
+	
+	function set_account_number($name){
+		if(is_numeric($name)){
+			$this->account_number= $name;
+		}else{
+			error_log($DEBUGNAME . "{$this->owner_name}: has not numeric account number: $name \n");
+		}
+	}
+	
+	
+	
+	function write(&$rpc){
+		$bancaid = $rpc->create( $this->return_array(), "res.partner.bank");
+		if ($bancaid== -1){
+			error_log($DEBUGNAME . "{$this->name} errore inserimento \n");
+			error_log(print_r($this,true));
+			die();
+		}
+		$this->id=$bancaid;	
+	}
+}
+
+
+
+class product_list_item {
+	var $id;
+	var $price_round = 0;
+	var $create_uid = 1;
+	var $price_min_margin = 0;
+	var $price_disount = 0;
+	var $name = '';
+	var $sequence = '5';
+	var $price_max_margin = 0;
+	var $product_id;
+	var $base = 2;
+	var $base_pricelist_id = "";
+	var $price_version_id;
+	var $company_id = "";
+	var $price_discount = 1.0;
+	
+	function return_array(){
+		return array(
+				'price_round'=> $this->price_round				    
+				, 'create_uid' => $this->create_uid
+				, 'price_min_margin' => $this->price_min_margin
+				, 'price_discount' => $this->price_discount
+				, 'name' => $this->name
+				, 'sequence' => $this->sequence
+				, 'price_max_margin' => $this->price_max_margin
+				, 'product_id' => $this->product_id
+				, 'base' => $this->base
+				, 'base_pricelist_id' => $this->base_pricelist_id
+				, 'price_version_id' => $this->price_version_id
+				, 'company_id' => $this->company_id
+				, 'price_discount' => $this->price_discount
+		);	
+	}
+	
+	function write(&$rpc){
+		$this->id= $rpc->create( $this->return_array(), "res.partner");
+		
+	}
+}
 
 
 
@@ -39,16 +318,17 @@ $x = $rpc->login("admin", "m1a1u1c1-", "mauceri", $config['odoourl'] . "xmlrpc/2
 
 
 
-//sync_bank($conn,$rpc);
+#sync_bank($conn,$rpc);
 ////sync_agent($conn,$rpc);
-//sync_clienti_vat($conn,$rpc);
-//sync_clienti_codfis($conn,$rpc);
-//sync_clienti_destcons($conn,$rpc);
-//sync_fornitori($conn,$rpc);
-//sync_gruppi($conn,$rpc);
+#sync_clienti_vat($conn,$rpc);
+#sync_clienti_codfis($conn,$rpc);
+#sync_clienti_destcons($conn,$rpc);
+#sync_fornitori($conn,$rpc);
+#sync_gruppi($conn,$rpc);
 //crea_listino($conn,$rpc);
-//sync_articoli($conn,$rpc);
+#sync_articoli($conn,$rpc);
 sync_fatture($conn,$rpc);
+sync_insoluti($conn,$rpc);
 	
 
 
@@ -87,7 +367,6 @@ function sync_agent(&$conn,&$rpc){
 	}
 
 
-
 function sync_bank(&$conn,&$rpc){
 
 $sql="select 	 BANCAAPPO as banca, 
@@ -110,13 +389,14 @@ while($row = mysqli_fetch_object($ids))
 	 		var_dump($bank);
 	 		die();
 	
+		}
 	}
-}
 }
 
 function sync_clienti_vat(&$conn,&$rpc){
 	//TODO importare codice fiscale 
-echo "Carico clienti con vat\n";
+	echo "Carico clienti con vat\n";
+	$DEBUGNAME='SYNC_CLIENTI_VAT:';
 
 	$sql="SELECT RAG_SOC as 'name',
 	 clienti.PROVINCIA as 'provincia',
@@ -124,6 +404,8 @@ echo "Carico clienti con vat\n";
 	 clienti.LOCALITA as 'localita',  
 	 COD_PARTIV as 'partita_iva',
 	 BANCAAPPO as banca, 
+	 clienti.DE_AGG1 as desc1,
+	 clienti.DE_AGG2 as desc2,
 	 DIPENDENZA as bancadip, 
 	 clienti.COD_PAG as mod_pag,
 	 CABI as abi,
@@ -134,127 +416,104 @@ echo "Carico clienti con vat\n";
 	 NOTE2 as 'note2',
 	 clinote.NOTE as 'detnote',
     agenti.NOMINATIVO as agente
-     FROM clienti left JOIN clinote ON clienti.SSSS = clinote.SSSS LEFT JOIN agenti ON clienti.COD_AGE = agenti.id WHERE COD_PARTIV regexp '^[0-9]+'" ;
+     FROM clienti left JOIN clinote ON clienti.SSSS = clinote.SSSS LEFT JOIN agenti ON clienti.COD_AGE = agenti.id WHERE COD_PARTIV regexp '^[0-9]+' GROUP BY partita_iva" ;
 $ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "$sql\n");
 
 $errn=0;
 while($row = mysqli_fetch_object($ids))
 	{
+		$partner= new res_partner();
+		$commerciale= array();
 		$conto=33;
 		//var_dump($row);
 		//echo preg_replace('/[^(\x20-\x7F)]*/','', $row->address);
 		
 	 	//echo $rpc->create( array('name'=>$row->surname), "res.partner");
 
+		//==========CERCO MODALITA' DI PAGAMENTO
 	 	$sql="SELECT odoo_id, type FROM odoo.cp_id_odoo WHERE id = ". $row->mod_pag .";";
 	 	$result= mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	 	if ($result->num_rows==0) { echo 'questa modalità di pagamento non esiste :'. $row->mod_pag."\n"; };
 	 	$termpag = mysqli_fetch_object($result);
-		/* if($termpag->type === 'R')
-		 		$conto=237;
-		 elseif ($termpag->type === 'D')
-			$conto=238;
-		*/
 		$termpag = $termpag->odoo_id;
+		//=======================================
+		
 	 	//Manipolazione delle stringhe
-	 	$commerciale= array();
 	 	$localita=explode(" ", $row->localita);
 	 	$cap= $localita[0];
 	 	$city= isset($localita[1]) ? $localita[1] : "";
+	 	
+	 	//Controllo telefoni
 	 	$errstring = array("/", "-", " ");
 	 	$row->telefono=str_replace($errstring,'',$row->telefono);
 	 	$row->telefono= ctype_digit($row->telefono)? $row->telefono:"";
 	 	$fisso=strcmp(substr($row->telefono, 0),"0")?$row->telefono:"";
 	 	$cellulare=strcmp(substr($row->telefono, 0),"3")?$row->telefono:"";	 	
+	 	
+	 	
+	 	//==============CERCO AGENTE SE IMPOSTATO
 	 	if(!empty($row->agente)){
 	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'. preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->agente) . '%')),"res.partner");
 	 		if(!empty($commerciale[0])){
 	 			$commerciale = $rpc->search(array(array('partner_id', '=',$commerciale[0])),"res.users");
 	 			if ($commerciale== -1){
-	 				echo "errore inserimento $errn commerciale ". $row->agente."\n";
+	 				error_log($DEBUGNAME .'errore inserimento $errn commerciale ". $row->agente."\n');
 	 				die();
 	 			}
 	 		}else{
-	 			echo "errore agente $row->agente\n";
+	 			error_log($DEBUGNAME ."errore agente $row->agente\n");
 	 		}
 	 	}
+	 	//=========================================
 	 	
-	 	$user = array(
-	  	'name'=> preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 	, 'city' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$city)
-	 	, 'contact_address' =>preg_replace("/[^a-zA-Z0-9\-\s]/", "",  $row->indirizzo) . " " . $city . " " . $cap . " " .$row->provincia
-	 	, 'customer' => true
-	 	, 'display_name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 	, 'employee' => false  
-		, 'vat' => 'IT' .  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->partita_iva)
-	 	, 'is_company' => true
-	 	, 'lang' => 'it_IT'
-	 	, 'phone' => $fisso
-	 	, 'mobile' => $cellulare
-	 	, 'street' =>   preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->indirizzo)
-	 	,  'user_id' => empty($commerciale[0])?"":$commerciale[0]
-	 	, 'type' => 'contact'
-	 	, 'tz' => 'Europe/Rome'
-	 	, 'tz_offset' => '+0100'
-	 	, 'zip' => $cap
-	 	, 'credit_limit' => 100000
-	 	, 'country_id' => 110
-	   , 'state_id' => "110"
-		, 'property_account_receivable' => $conto
-		, 'property_account_position' => 1
-		, 'property_payment_term' => 'account.payment.term,'.$termpag
-		, 'comment' => preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->note1 . "\n" . $row->note2 ."\n" . $row->detnote)
-	 	);
-	 	$userid = $rpc->create( $user, "res.partner");
-	 	if ($userid== -1){
-	 		$user['vat'] = "";
-	 		$userid = $rpc->create( $user, "res.partner");
-	 		if ($userid== -1){
-	 		echo "errore inserimento $errn ". $user['name']."\n";
-	 		var_dump($user);
-	 		die();
-	 		}
-	 	}
+	 	
+	 	//============= CARICO PARTNER/CLIENTE
+	 	$partner->set_name("{$row->name}");
+	 	$partner->set_city($city);
+	 	$partner->set_contact_address("{$row->indirizzo} $city $cap {$row->provincia} ");
+	 	$partner->set_display_name("{$row->name}");
+	 	$partner->set_vat("{$row->partita_iva}");
+	 	$partner->set_phone($fisso);
+	 	$partner->set_mobile($cellulare);
+	 	$partner->set_user_id(empty($commerciale[0])?"":$commerciale[0]);
+	 	$partner->set_street("{$row->indirizzo}");
+	 	$partner->set_zip($cap);
+	 	$partner->property_account_receivable= $conto;
+	 	$partner->set_property_payment_term($termpag);
+	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
+		$partner->write($rpc);	
+		//=========================================
+		
+		
 	 	if(empty($row->banca)){
-	   	continue;
+	   		continue;
 		}
-		$idbanca = $rpc->searchread(
-							array(
-								array('cab', 'like',substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab),0,5)), array('abi', 'like', substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->abi),0,5))),
+		$idbanca = $rpc->searchread(array(array('cab', 'like',substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab),0,5)), array('abi', 'like', substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->abi),0,5))),
 								"res.bank",
 								array('name','id','cab','abi')
 								);
 							
 		if(empty($idbanca)){
-	   	continue;
+	  	 	continue;
 		}			
 		
-	 	$banca = array (
-	 		'owner_name' => preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 		, 'street' => preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->indirizzo)
-	 		, 'name' => '/'
-	 		, 'city' => preg_replace('/[^A-Za-z0-9\-\s]/', '',$city)
-	 		, 'partner_id' => $userid
-	 		, 'bank_name' =>  $idbanca[0]['name']
-	 		, 'bank' => $idbanca[0]['id']
-	 		, 'acc_number' => $row->conto!=""?$row->conto:"00000"
-	 		, 'bank_cab' => $idbanca[0]['cab']
-	 		, 'bank_abi' => $idbanca[0]['abi']
-	 		, 'state' => 'bank'
-	 	);
-	 	$bancaid = $rpc->create( $banca, "res.partner.bank");
-	 	if ($bancaid== -1){
-	 		var_dump($idbanca);
-	 		var_dump($banca);
-	 		die();
-	 	}
+		//=============== CARICO BANCA CLIENTE
+		$bank= new res_partner_bank();
+		$bank->set_owner_name($row->name);
+		$bank->set_street($row->indirizzo);
+		$bank->set_city($city);
+		$bank->set_partner_id($partner->id);
+		$bank->set_bank_name($idbanca[0]['name']);
+		$bank->set_bank($idbanca[0]['id']);
+		$bank->set_account_number($row->conto!=""?$row->conto:"00000");
+		$bank->bank_abi= $idbanca[0]['abi'];
+		$bank->bank_cab= $idbanca[0]['cab'];
+		$bank->write($rpc);
+		//========================================
 	 	
 	 }	
 
 }
-
-
-
 
 function sync_clienti_codfis(&$conn,&$rpc){
 	//TODO importare codice fiscale 
@@ -265,6 +524,8 @@ function sync_clienti_codfis(&$conn,&$rpc){
 	 clienti.INDIRIZZO as 'indirizzo',
 	 clienti.LOCALITA as 'localita',
 	 COD_PARTIV as 'partita_iva',
+	 clienti.DE_AGG1 as desc1,
+	 clienti.DE_AGG2 as desc2,
 	 clienti.COD_FISCAL as'codice_f',
 	 clienti.COD_PAG as mod_pag,
 	 BANCAAPPO as banca, 
@@ -277,7 +538,7 @@ function sync_clienti_codfis(&$conn,&$rpc){
 	 NOTE2 as 'note2',  
 	 clinote.NOTE as 'detnote',
 	 agenti.NOMINATIVO as agente 
-	 FROM odoo.clienti left JOIN clinote ON clienti.SSSS = clinote.SSSS LEFT JOIN agenti ON clienti.COD_AGE = agenti.id WHERE COD_PARTIV regexp '^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$' OR (clienti.COD_FISCAL regexp '^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$' AND COD_PARTIV LIKE '') OR (clienti.COD_FISCAL LIKE '' AND COD_PARTIV LIKE '')";
+	 FROM odoo.clienti left JOIN clinote ON clienti.SSSS = clinote.SSSS LEFT JOIN agenti ON clienti.COD_AGE = agenti.id WHERE COD_PARTIV regexp '^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$' OR (clienti.COD_FISCAL regexp '^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$' AND COD_PARTIV LIKE '') OR (clienti.COD_FISCAL LIKE '' AND COD_PARTIV LIKE '') group by name";
 	 
 	 
 	 
@@ -286,6 +547,8 @@ $ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 echo "Carico clienti con c	odice fiscale\n";
 while($row = mysqli_fetch_object($ids))
 	{
+		$partner= new res_partner();
+		if($row->name='.')continue;
 		$conto=33;
 		//var_dump($row);
 		//echo preg_replace('/[^(\x20-\x7F)]*/','', $row->address);
@@ -323,66 +586,52 @@ while($row = mysqli_fetch_object($ids))
 	 		}
 	 	}
 	 	
-	 	$user = array(
-	  	'name'=> preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 	, 'city' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$city)
-	 	, 'contact_address' =>preg_replace("/[^a-zA-Z0-9\-\s]/", "",  $row->indirizzo) . " " . $city . " " . $cap . " " .$row->provincia
-	 	, 'customer' => true
-	 	, 'display_name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	// 	, 'email' => $row->email
-	 	, 'employee' => false  
-		, 'fiscalcode' =>  !empty($row->partita_iva)?$row->partita_iva:$row->codice_f
-	//	, 'date' => $row->created_at
-	 	, 'is_company' => true
-	 	, 'lang' => 'it_IT'
-	 	, 'phone' => $fisso
-	 	, 'mobile' => $cellulare
-	// 	, 'notify_email' => 'always'
-	 	, 'street' =>   preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->indirizzo)
-	 	, 'type' => 'contact'
-	 	, 'user_id' => empty($commerciale[0])?"":$commerciale[0]
-	 	, 'tz' => 'Europe/Rome'
-	 	, 'tz_offset' => '+0100'
-	 	, 'zip' => $cap
-	 	, 'country_id' => 110
-        , 'credit_limit' => 100000
-		, 'state_id' => "110"
-		, 'property_account_receivable' => $conto
-		, 'property_account_position' => 1
-		, 'property_payment_term' => 'account.payment.term,'.$termpag
-		, 'comment' => preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->note1 . "\n" . $row->note2 ."\n" . (isset($row->detnote) ? $row->detnote : ""))
-	 //	, 'property_stock_supplier' => array("8","Partner Locations/Suppliers") 
-	 //	, 'section_id' => array("1","Direct Sales") 
-	 	);
-	 	$userid = $rpc->create( $user, "res.partner");
-	 	if ($userid== -1){
-	 		var_dump($user);
-	 	}
+	 	//============= CARICO PARTNER/CLIENTE
+	 	$partner->set_name("{$row->name}");
+	 	$partner->set_city($city);
+	 	$partner->set_contact_address("{$row->indirizzo} $city $cap {$row->provincia} ");
+	 	$partner->set_display_name("{$row->name}");
+		$partner->set_fiscalcode(!empty($row->partita_iva)?$row->partita_iva:$row->codice_f);
+	 	$partner->set_phone($fisso);
+	 	$partner->set_user_id(empty($commerciale[0])?"":$commerciale[0]);
+	 	$partner->set_mobile($cellulare);
+	 	$partner->set_street("{$row->indirizzo}");
+	 	$partner->set_zip($cap);
+	 	$partner->property_account_receivable= $conto;
+	 	$partner->set_property_payment_term($termpag);
+	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
+	 	$partner->write($rpc);
+	 	//=========================================
 	 	
-	 		 	if($row->banca==""){
-	   	continue;
+	 	
+	 	if($row->banca==""){
+	   		continue;
 		}
 		$idbanca = $rpc->searchread(array(array('cab', 'like', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab)),array('abi', 'like', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cabi))),"res.bank",array('name','id','cab','abi'));
-	 	$banca = array (
-	 		'owner_name' => preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 		, 'street' => preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->indirizzo)
-	 		, 'name' => $idbanca[0]['name']
-	 		, 'city' => $city
-	 		, 'partner_id' => $userid
-	 		, 'bank' => $idbanca[0]['id']
-	 		, 'acc_number' => $row->conto
-	 		, 'bank_cab' => $idbanca[0]['cab']
-	 		, 'bank_abi' => $idbanca[0]['abi']
-	 		, 'state' => 'bank'
-	 	);
-	 	$bancaid = $rpc->create( $banca, "res.partner.bank");
-	 	if ($bancaid== -1){
-	 		var_dump($banca);
-	 		//die();
-	 	}
+	 	
+		if(empty($idbanca)){
+			continue;
+		}
+		
+		
+		//=============== CARICO BANCA CLIENTE
+		$bank= new res_partner_bank();
+		$bank->set_owner_name($row->name);
+		$bank->set_street($row->indirizzo);
+		$bank->set_city($city);
+		$bank->set_partner_id($partner->id);
+		$bank->set_bank_name($idbanca[0]['name']);
+		$bank->set_bank($idbanca[0]['id']);
+		$bank->set_account_number($row->conto!=""?$row->conto:"00000");
+		$bank->bank_abi= $idbanca[0]['abi'];
+		$bank->bank_cab= $idbanca[0]['cab'];
+		$bank->write($rpc);
+		//========================================
+		
 	 }	
 
 }
+
 
 function sync_clienti_destcons(&$conn,&$rpc){
 	$sql="SELECT RAG_SOC, DESTI_CONS, INDIR_CONS, CAPLO_CONS  FROM odoo.clienti WHERE DESTI_CONS != ''";
@@ -435,6 +684,7 @@ function sync_fornitori(&$conn,&$rpc){
 	echo "Carico Fornitori\n";
 	while($row = mysqli_fetch_object($ids))
 	{
+		$partner = new res_partner();
 	 	
 	 	//Manipolazione delle stringhe
 	 	$localita=explode(" ", $row->localita);
@@ -447,48 +697,27 @@ function sync_fornitori(&$conn,&$rpc){
 	 	$fisso=strcmp(substr($row->telefono, 0),"0")?$row->telefono:"";
 	 	$cellulare=strcmp(substr($row->telefono, 0),"3")?$row->telefono:"";
 	 	
+	 	//============= CARICO PARTNER/CLIENTE
+	 	$partner->set_name("{$row->name}");
+	 	$partner->set_city($city);
+	 	$partner->customer=false;
+	 	$partner->supplier=true;
+	 	$partner->set_contact_address("{$row->indirizzo} $city $cap {$row->provincia} ");
+	 	$partner->set_display_name("{$row->name}");
+	 	$partner->set_vat((empty($row->partita_iva) or preg_match('/^VEDI/i',$row->partita_iva ))?'':'IT'.$row->partita_iva);
+	 	$partner->is_company=true;
+	 	$partner->set_phone($fisso);
+	 	$partner->set_fax($row->fax);
+	 	$partner->set_mobile($cellulare);
+	 	$partner->set_user_id(empty($commerciale[0])?"":$commerciale[0]);
+	 	$partner->set_street("{$row->indirizzo}");
+	 	$partner->set_zip($cap);
+	 	$partner->property_account_receivable= $conto;
+	 	$partner->set_property_payment_term($termpag);
+	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
+	 	$partner->write($rpc);
+	 	//=========================================
 	 	
-	 	$user = array(
-	  	'name'=>preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	 	, 'city' => $city
-	 	, 'contact_address' =>preg_replace("/[^a-zA-Z0-9\s]/", "",  $row->indirizzo) . " " . $city . " " . $cap . " " .$row->provincia
-	 	, 'customer' => false
-	 	, 'supplier' => true
-	 	, 'display_name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name)
-	// 	, 'email' => $row->email
-	 	, 'employee' => false  
-		, 'vat' =>  (empty($row->partita_iva) or preg_match('/^VEDI/i',$row->partita_iva ))?'':'IT'.$row->partita_iva
-	//	, 'date' => $row->created_at
-	 	, 'is_company' => true
-	 	, 'lang' => 'it_IT'
-	 	, 'fax' => $row->fax
-	 	, 'phone' => $fisso
-	 	, 'mobile' => $cellulare
-	// 	, 'notify_email' => 'always'
-	 	, 'street' =>   preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->indirizzo)
-	 	, 'type' => 'contact'
-	 	, 'tz' => 'Europe/Rome'
-	 	, 'tz_offset' => '+0100'
-	 	, 'zip' => $cap
-	 	, 'country_id' => 110
-	 	, 'credit_limit' => "0"
-	 	, 'state_id' => "110"
-		, 'property_account_position' => 1
-		, 'comment' =>   preg_replace('/[^A-Za-z0-9\-\s]/', ' ',$row->note1 . "\n" . $row->note2)
-	 //	, 'property_stock_supplier' => array("8","Partner Locations/Suppliers") 
-	 //	, 'section_id' => array("1","Direct Sales") 
-	 	);
-	//	var_dump($user);
-	 	$userid = $rpc->create( $user, "res.partner");
-		if ($userid== -1){
-	 		$user['vat'] = "";
-	 		$userid = $rpc->create( $user, "res.partner");
-	 		if ($userid== -1){
-	 			echo "errore inserimento $errn ". $user['name']."\n";
-	 			var_dump($user);
-	 			die();
-	 		}
-	 	}	
 	}
 }
 
@@ -511,10 +740,13 @@ function sync_fatture(&$conn,&$rpc){
 		, VET_INDIR
 		, VET_LOCAL
 		, VET_PROVI
+        , agenti.NOMINATIVO as agente 
 		FROM odoo.fatture 
 		INNER JOIN odoo.condpag on fatture.PAGAMENTO = condpag.id
 		INNER JOIN odoo.clienti on fatture.MMCC = clienti.mmcc and fatture.SSSS = clienti.SSSS
-		ORDER BY numero ASC;";
+        LEFT JOIN odoo.agenti ON odoo.clienti.COD_AGE = agenti.id
+        GROUP by NUMERO
+		ORDER BY numero ASC ;";
 		
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
@@ -526,11 +758,25 @@ function sync_fatture(&$conn,&$rpc){
 		$scadenza=$row->DATA;
 		$isinsoluto=false;
 		$invoiceid=0;
+		
 		$partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name))),"res.partner");
 		if(empty($partner)){
 				echo "errore non trovo il CLIENTE  $row->name)\n";
 				continue;
 			}
+		if(!empty($row->agente)){
+	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'. preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->agente) . '%')),"res.partner");
+	 		if(!empty($commerciale[0])){
+	 			$commerciale = $rpc->search(array(array('partner_id', '=',$commerciale[0])),"res.users");
+	 			if ($commerciale== -1){
+	 				echo "errore inserimento $errn commerciale ". $row->agente."\n";
+	 				die();
+	 			}
+	 		}else{
+	 			echo "errore agente $row->agente\n";
+	 		}
+	 	}
+			
 		//Contronllo le modalita di pagamento
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58 or $row->id == 114 or $row->id == 80){
 			$state="paid";
@@ -561,16 +807,16 @@ function sync_fatture(&$conn,&$rpc){
 		$termpag = mysqli_fetch_object($result);
 		$termpag =  empty($termpag->odoo_id)?"":$termpag->odoo_id;
 		
-		$acmoveid =create_account_move($rpc,$partner[0],"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,$row->DATA,'posted',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT),4,1);
-		
+		$acmoveid =create_account_move($rpc,$partner[0],"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,$row->DATA,'posted',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT),4,1);
+	
 		 //SE NON E' UNA NOTA DI CREDITO
 		if($row->TIPO_CAUSA!='N'){
-		 	
-			$invoiceid =create_invoice($rpc,33,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, '/',$acmoveid,$termpag,$partner[0],$state,'out_invoice','false', $row->numero, $isinsoluto);
+			$invoiceid =create_invoice($rpc,33,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, '/',$acmoveid,$termpag,$partner[0],$state,'out_invoice','false', $row->numero, $isinsoluto, 1, empty($commerciale[0])?1:$commerciale[0]);
 			if($invoiceid==-1) continue;
 			$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
 			$items= mysqli_query($conn, $sql) or die("\nError 04: " . mysql_error() . "\n");
 			while($item = mysqli_fetch_object($items)){
+				if($item->PREZZO == 0) continue;
 				$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
 				$invoicelineid = create_invoice_line($rpc,
 					empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name'],
@@ -632,17 +878,17 @@ function sync_fatture(&$conn,&$rpc){
 		
 		if($row->TIPO_CAUSA==='N'){ //NOTA DI CREDITO
 			//Creo MOVE LINE netto
-			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totnet,80,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",-1*$totnet,1,1);
+			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totnet,80,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",-1*$totnet,1,1);
 			//Creo MOVE LINE IVA
-			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totiva,79,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",-1*	$totiva,1,1);
+			$acmovelineid = create_account_move_line($rpc,$partner[0],0,$totiva,79,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",-1*	$totiva,1,1);
 			sync_paid_nota($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA,$totnet,$totiva,$termpag,$state);
 			continue;
 		}
 		
 		//Creo MOVE LINE netto
-		$acmovelineid = create_account_move_line($rpc,$partner[0],$totnet,0,80,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",$totnet,1,1,$invoiceid);
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totnet,0,80,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",$totnet,1,1,$invoiceid);
 		//Creo MOVE LINE IVA
-		$acmovelineid = create_account_move_line($rpc,$partner[0],$totiva,0,79,'valid',"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",$totiva,1,1,$invoiceid);
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totiva,0,79,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",$totiva,1,1,$invoiceid);
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 42 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58 or $row->id == 114 or $row->id == 80){
 			sync_paid_immediato($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA);
 		}else{
@@ -666,7 +912,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		,'journal_id' => 3
 		,'debit' => 0
 		,'state' => 'valid'
-		,'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+		,'ref' => "15/".str_pad($counter, 5, '0', STR_PAD_LEFT) 
 		,'account_id' => 33
 		,'period_id' => 4
 		,'date' => $data
@@ -686,7 +932,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 	
 	//$acmoveid = create_account_move($rpc,$partner,"15/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'posted',"2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO",4,3);
 	
-	$notaid =create_invoice($rpc,33,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, 'nota di credito',$acmoveidb,4,$partner,$state,'out_refund','false', $row->numero,false);
+	$notaid =create_invoice($rpc,33,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, 'nota di credito',$acmoveidb,4,$partner,$state,'out_refund','false', $row->numero,false);
 	if($notaid==-1)
 		return ;
 	
@@ -752,10 +998,10 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_id' => $acmovereconcileid),'account.move.line');
 		$reconcilied=$acmovereconcileid;
 		
-		$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,7);
+		$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),4,7);
 		//Creo netto
 		$acmovelineid = create_account_move_line($rpc,$partner,$totnet,0,80,'valid'
-			,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
+			,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
 			,132
 			,$row->DATA
 			,$acmoveid
@@ -767,7 +1013,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		
 		//Creo IVA
 		$acmovelineid = create_account_move_line($rpc,$partner,$totiva,0,79,'valid'
-			,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
+			,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
 			,94
 			,$row->DATA
 			,$acmoveid
@@ -778,7 +1024,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 	
 		//Creo storno
 		$acmovelineid =create_account_move_line($rpc,$partner,0,$totale,'','valid'
-		,"15/".str_pad($counter, 4, '0', STR_PAD_LEFT) . " NOTA DI CREDITO"
+		,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . " NOTA DI CREDITO"
 		,33
 		,$data
 		,$acmoveid,'/',0,1,1,$notaid,$acmovereconcileid,$scadenza);
@@ -797,7 +1043,7 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 		,'journal_id' => 1
 		,'debit' => $totale
 		,'state' => 'valid'
-		,'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+		,'ref' => "15/".str_pad($counter, 5, '0', STR_PAD_LEFT) 
 		,'account_id' => 33
 		,'period_id' => 4
 		,'date' => $data
@@ -824,7 +1070,7 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 	}
 	$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_ref' => "A$counter", 'reconcile_id' => $acmovereconcileid),'account.move.line');
 	
-	$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,7);
+	$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),4,7);
 	
 	$acmoveline = array(
 		'partner_id' => $partner
@@ -835,7 +1081,7 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 		, 'journal_id' => 7
 		, 'debit' => $totale
 		, 'state' => 'valid'
-		, 'ref' => "BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+		, 'ref' => "BNK12015" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 		, 'account_id' => 235
 		, 'period_id' => 4
 		, 'date' => $row->DATA
@@ -859,7 +1105,7 @@ function sync_paid_immediato(&$conn,&$rpc,$row,$counter,$partner,$totale,$scaden
 		, 'debit' => 0
 		//, 'reconcile_ref' => "A$counter"
 		, 'state' => 'valid'
-		, 'ref' => "BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+		, 'ref' => "BNK12015" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 		, 'account_id' => 33
 		, 'period_id' => 4
 		, 'date' => $row->DATA
@@ -886,6 +1132,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 	$result= mysqli_query($conn, $sql) or die("\nError 02: " . mysql_error() . "$sql\n");
 	while($ribarow = mysqli_fetch_object($result)){
 		if($ribarow->CAUSALE === 'Ric. Bancaria' or $ribarow->CAUSALE ==='Rimessa Diretta' or $ribarow->CAUSALE==='Bonifico Banc.' or $ribarow->CAUSALE==='Fattura contrass.' or $ribarow->CAUSALE==='INSOLUTO'){
+		    
 		    if($ribarow->CAUSALE!='INSOLUTO' ){
 			    $acmoveline = array(
 				    'partner_id' => $partner
@@ -896,7 +1143,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 				    , 'journal_id' => 1
 				    , 'debit' => $ribarow->IMPORTO
 				    , 'state' => 'valid'
-				    , 'ref' => "15/".str_pad($counter, 4, '0', STR_PAD_LEFT) 
+				    , 'ref' => "15/".str_pad($counter, 5, '0', STR_PAD_LEFT) 
 				    , 'account_id' => 33
 				    , 'period_id' => 4
 				    , 'date_maturity' => $ribarow->DATA_SCAD
@@ -930,7 +1177,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 				
 				
 				
-					$acmove_id = create_account_move($rpc,$partner,"Ri.Ba. 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT),$row->DATA,'posted',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,8);
+					$acmove_id = create_account_move($rpc,$partner,"Ri.Ba. 15/" . str_pad($counter, 5, '0', STR_PAD_LEFT),$row->DATA,'posted',"BNK1/2015/" . str_pad($counter, 4, '0', STR_PAD_LEFT),4,8);
 				
 					$acmoveline = array(
 						'partner_id' => $partner
@@ -941,7 +1188,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 						, 'journal_id' => 8
 						, 'debit' => 0
 						, 'state' => 'valid'
-						, 'ref' => "Ri.Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+						, 'ref' => "Ri.Ba 15/" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 						, 'account_id' => 237
 						, 'period_id' => 4
 						, 'date' => $row->DATA
@@ -949,7 +1196,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 						, 'reconcile_ref' => "A$acmovereconcileid"
 						, 'reconcile_id' => $acmovereconcileid
 						, 'move_id' => $acmove_id
-						, 'name' => "15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+						, 'name' => "15/" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 						, 'tax_amount' => 0
 					);
 					$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
@@ -967,13 +1214,13 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 							, 'journal_id' => 8
 							, 'debit' => $ribarow->IMPORTO
 							, 'state' => 'valid'
-							, 'ref' => "Ri.Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+							, 'ref' => "Ri.Ba 15/" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 							, 'account_id' => 237
 							, 'period_id' => 4
 							, 'date' => $row->DATA
 							, 'date_maturity' => $ribarow->DATA_SCAD
 							, 'move_id' => $acmove_id
-							, 'name' => "Ri. Ba 15/" . str_pad($counter, 4, '0', STR_PAD_LEFT)
+							, 'name' => "Ri. Ba 15/" . str_pad($counter, 5, '0', STR_PAD_LEFT)
 							, 'tax_amount' => 0
 							, 'day' => $ribarow->DATA_SCAD
 						);
@@ -987,7 +1234,7 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 					else
 					{
 						echo "reconcilied uguale a none \n";
-						create_account_move_line($rpc,$partner,0,$ribarow->IMPORTO,'','valid',"BNK12015" . str_pad($counter, 4, '0', STR_PAD_LEFT),'237',$row->DATA,$acmove_id,'/',0,1,8,$invoiceid, 'none',$ribarow->DATA_SCAD);
+						create_account_move_line($rpc,$partner,0,$ribarow->IMPORTO,'','valid',"BNK12015" . str_pad($counter, 5, '0', STR_PAD_LEFT),'237',$row->DATA,$acmove_id,'/',0,1,8,$invoiceid, 'none',$ribarow->DATA_SCAD);
 					}
 				}		
 	 		}else{
@@ -1003,13 +1250,104 @@ function sync_paid_scadenze(&$conn,&$rpc,$row,$counter,$partner,$totale,$isinsol
 	}
 }
 
-
-
+function sync_insoluti(&$conn,&$rpc){
+    $sql="SELECT scadenze.* , clienti.RAG_SOC FROM odoo.scadenze INNER JOIN odoo.clienti on scadenze.MMCC = clienti.mmcc and scadenze.SSSS = clienti.SSSS WHERE DATA_DOC < '2015-01-01' AND CAUSALE like \"INSOLUTO\" AND PAGATO != 'C' AND PAGATO != 'P' AND NUM_DOC != 0 group by NUM_DOC, DATA_DOC;";
+    $ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+    while($line = mysqli_fetch_object($ids)){
+        $partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$line->RAG_SOC))),"res.partner");
+		if(empty($partner[0])){
+		    echo "errore non trovo il CLIENTE  $line->name)\n";
+		    continue;
+	    }
+	    $scadenza=$line->DATA_SCAD!="0000-00-00"?$line->DATA_SCAD:$line->DATA_DOC;
+        $time = strtotime($line->DATA_DOC);
+        $acmoveid =create_account_move($rpc,$partner[0],date('y', $time) .'/'.str_pad($line->NUM_DOC, 5, '0', STR_PAD_LEFT),$line->DATA_DOC,'posted',date('Y', $time).'/'. $line->NUM_DOC,4,1);
+        $invoice=array(
+			 'account_id' => 33
+			, 'company_id' => 1
+			, 'number' => date('y', $time).'/'.str_pad($line->NUM_DOC, 5, '0', STR_PAD_LEFT)
+			, 'currency_id' => 1
+			, 'date_invoice' =>  $line->DATA_DOC
+			, 'date_due' => $scadenza
+			, 'fiscal_position' => 1
+			, 'internal_number' => date('y', $time).'/'.str_pad($line->NUM_DOC, 5, '0', STR_PAD_LEFT)
+			, 'period_id' => 4
+			, 'payment_term' => 10
+			, 'move_id' => $acmoveid
+			, 'name' => '/'
+			, 'partner_id' => $partner[0]
+			, 'journal_id' => 1
+			, 'state' => 'open'
+			, 'type' => 'out_invoice'
+			, 'reconciled' => false
+			, 'user_id' => 1
+			, 'comment' => ''
+			, 'is_unsolved' => true
+		    );
+		    $invoiceid = $rpc->create( $invoice, "account.invoice");
+		    if ($invoiceid== -1){
+				var_dump($invoice);
+				echo "\n\nsync Insoluti account.invoice\n\n\n";
+				die();
+			}
+        $sql="SELECT scadenze.* , clienti.RAG_SOC FROM odoo.scadenze  INNER JOIN odoo.clienti on scadenze.MMCC = clienti.mmcc and scadenze.SSSS = clienti.SSSS WHERE NUM_DOC =". $line->NUM_DOC."  AND DATA_DOC = \"".$line->DATA_DOC ."\" AND CAUSALE like \"INSOLUTO\" AND PAGATO != 'C'";
+        $ods = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
+        while($row = mysqli_fetch_object($ods)){
+		        $invoicelineid = create_invoice_line($rpc,
+					'tot da recuperare',
+					$invoiceid,
+					132,
+					"",
+					$partner[0],
+					$row->IMPORTO, //prezzo
+					1);  //quantità
+					
+				$acmovelineid = create_account_move_line($rpc,$partner[0],$row->IMPORTO,0,80,'valid',date('y', $time).'/'.str_pad($row->NUM_DOC, 5, '0', STR_PAD_LEFT) ,132,$row->DATA_DOC,$acmoveid,date('y', $time).'/'.str_pad($row->NUM_DOC, 5, '0', STR_PAD_LEFT),$row->IMPORTO,1,1,$invoiceid);
+                if ($acmovelineid== -1){
+					var_dump($invoice);
+					echo "\n\nsync Insoluti account.move.line\n\n\n";
+					die();
+					}
+				$acmoveline = array(
+				    'partner_id' => $partner[0]
+				    ,'company_id' => 1
+				    , 'blocked' => false
+				    , 'create_uid' => 1
+				    , 'credit' => 0
+				    , 'journal_id' => 1
+				    , 'debit' => $row->IMPORTO
+				    , 'state' => 'valid'
+				    , 'ref' => date('y', $time).'/'.str_pad($row->NUM_DOC, 5, '0', STR_PAD_LEFT)
+				    , 'account_id' => 33
+				    , 'period_id' => 4
+				    , 'date_maturity' => $scadenza
+				    , 'date' => $row->DATA_DOC
+				    , 'move_id' => $acmoveid
+				    , 'stored_invoice_id' => $invoiceid
+				    , 'name' => "/"
+				    , 'tax_amount' => 0
+				    , 'quantity' => 1
+			    );
+			    $acmovelineid= $rpc->create( $acmoveline, "account.move.line");
+				    if ($acmovelineid== -1){
+		     			var_dump($acmoveline);
+					    echo "\n\nsync insoluti account.move.line scadenza\n\n\n";
+					    die();
+	     			}
+            // DA TESTARE
+            $tmp= $rpc->search(array(array('move_id', '=', $acmoveid),array('reconcile_id', '!=', '')),"account.move.line");
+            $query= "INSERT INTO invoice_unsolved_line_rel VALUES (" . $tmp[0] .",". $invoiceid." );\n";
+            file_put_contents('query.txt', $query, FILE_APPEND);
+        }
+    }
+}
 
 function sync_articoli(&$conn,&$rpc){
 	global $listver;
 	echo "Carico prodotti" . date('Y-m-d H:i:s') ."\n";
+	$DEBUGNAME='SYNC_ARTICOLI:';
 	$listver= 2;
+
 	$sql="SELECT articoli.CODICE as codice,
 			 GRUPPO as gruppo,
 			 descrizion as nome,
@@ -1017,6 +1355,7 @@ function sync_articoli(&$conn,&$rpc){
 			 PREZZONETT as prezzonetto,
 			 COD_ART_FO as codforn,
 			 PREZZO_1 as prezzofinale,
+             PREZZO_2 as prezzofinale2,
 			 COSTO_ULT as costo,
 			 PERCRICAR1 as scontocliente ,
 			 COSTODACON as condizione, 
@@ -1035,7 +1374,9 @@ function sync_articoli(&$conn,&$rpc){
 			 artpagc.SCONTO3 as sconto3,
 			 artpagc.PZOMAGGIO as pezziomaggio,
 			 artpagc.OMAGGIOGNI as omaggiogni,
-			 BARCODE1 as barcode FROM odoo.articoli left JOIN odoo.fornitori on fornitori.MMCC = MMCC_FORAB AND fornitori.SSSS = SSSS_FORAB left JOIN odoo.artpagc ON articoli.codice = artpagc.CODICE";
+			 BARCODE1 as barcode,
+			 BARCODE2 as barcode2
+			  FROM odoo.articoli left JOIN odoo.fornitori on fornitori.MMCC = MMCC_FORAB AND fornitori.SSSS = SSSS_FORAB left JOIN odoo.artpagc ON articoli.codice = artpagc.CODICE group by CODICE";
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
 	{
@@ -1056,7 +1397,7 @@ function sync_articoli(&$conn,&$rpc){
 		$idcategory = $rpc->search(array(array('name', '=', $gruppo->descrizione)),"product.category");
 		}
 		//--------
-		if( $row->prezzolistino!= '0')
+	if( $row->prezzolistino!= '0')
 		{
 		 	$articolo = array(
 			'active'=>true
@@ -1064,7 +1405,7 @@ function sync_articoli(&$conn,&$rpc){
 			,'categ_id' => isset($idcategory[0])?$idcategory[0]:""
 			, 'type' => 'product'
 			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-			,'ean13'=>$row->barcode
+			, 'ean13'=> $row->barcode
 			, 'description' =>  $note
 		 	, 'default_code' => $row->codice
 		 	, 'list_price' => str_replace(',', '.', $row->prezzolistino)
@@ -1119,7 +1460,7 @@ function sync_articoli(&$conn,&$rpc){
 		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
 		 	);
 	 	}else{
-	 		print("C'è qualcosa che non  va codice: $row->codice \n");
+	 		error_log($DEBUGNAME . "C'è qualcosa che non  va codice: $row->codice \n");
 	 		continue;
 	 	}
 	 	
@@ -1133,6 +1474,34 @@ function sync_articoli(&$conn,&$rpc){
 	 				die();
 		 	}
 		}	 	
+	 	
+		if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
+		 	$listino1 = new product_list_item;
+		 	$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+		 	$listino1->price_discount = ($row->prezzofinale / $row->costo);
+		 	$listino1->base= 2;
+		 	$listino1->price_version_id= 3;
+		 	$listino1->product_id = $articoli;
+			$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
+			if ($tmp == -1){
+				var_dump($listino1->return_array());
+				die();
+			}
+		}
+		if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
+			$listino1 = new product_list_item;
+			$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+			$listino1->price_discount = ($row->prezzofinale2 / $row->costo);
+			$listino1->base= 2;
+			$listino1->price_version_id= 4;
+			$listino1->product_id = $articoli;
+			$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
+			if ($tmp == -1){
+				var_dump($listino1->return_array());
+				die();
+			}
+		}
+	 	
 	 	
 	 	if(!empty($idfornitore)){
 	     	$fornitore= array(
@@ -1224,10 +1593,9 @@ function sync_articoli(&$conn,&$rpc){
 	 		var_dump($stokquant);
 	 		die();
 	 	}
+	 	
 	 }
 }	
-
-
 
 function sync_gruppi(&$conn,&$rpc){
 	$sql="SELECT CODICE as codice, descrizion as descrizione  FROM odoo.gruppi;";
@@ -1244,10 +1612,6 @@ function sync_gruppi(&$conn,&$rpc){
 		$gruppi = $rpc->create( $gruppi, "product.category");
 	}
 }
-
-
-
-
 
 function create_bank_account(&$conn,&$rpc,$id,$userid,$iban ){
 		$sql= "INSERT INTO `owums_db_new`.`user_openwisp_odoo` (`uid_openwisp_id`, `uid_odoo_id`, `created_at`, `updated_at`) VALUES ('". $id ."', '".$userid ."', NOW(), NOW());";
@@ -1278,10 +1642,9 @@ function create_invoice_tax(&$rpc,$nameiva,$invoiceid,$account_id,$base_amount,$
 	);
 	$invoicelinetaxid = $rpc->create( $lineiva, "account.invoice.tax");
 	if ($invoicelinetaxid== -1){
-		echo "errore sul inserimento iva\n";
-		echo "\n\n\n\n\n";
+		error_log("CREATE_INVOICE_TAX: errore sul inserimento iva\n");
  	}else{
- 	return $invoicelinetaxid;
+ 		return $invoicelinetaxid;
  	}
 }
 
@@ -1297,13 +1660,12 @@ function create_account_move(&$rpc,$partner,$name,$date,$state='posted',$ref='',
 		);
 		$acmoveid= $rpc->create( $acmove, "account.move");
 		if ($acmoveid== -1){
- 			var_dump($acmove);
-			echo "\n\naccount.move\n\n\n";
+			error_log("CREATE_ACCOUNT_MOVE: errore sul inserimento iva\n");
+			error_log(print_r($acmove,TRUE));
 		}else{
-		return $acmoveid;
+			return $acmoveid;
 		}
 }
-
 
 function create_account_move_line(&$rpc,$partner,$credit,$debit,$tax_code_id,$state,$ref,$account_id,$date,$acmoveid,$name,$tax_amount,$quantity,$journal_id,$invoice_id='',$reconcilied = "none",$date_maturity=''){
 	$company_id = 1;
@@ -1361,13 +1723,12 @@ function create_account_move_line(&$rpc,$partner,$credit,$debit,$tax_code_id,$st
 	}
 	$acmovelineid= $rpc->create( $acmoveline, "account.move.line");
 	if ($acmovelineid== -1){
-		var_dump($acmoveline);
-		echo "\n\naccount.move.line TOT\n\n\n";
+		error_log("CREATE_ACCOUNT_MOVE_LINE: errore sul inserimento iva\n");
+		error_log(print_r($acmoveline,TRUE));
 	}else{
 		return $acmovelineid;
 	}
 }
-
 
 function create_invoice_line(&$rpc,$name,$invoiceid,$account_id,$product_id,$partner,$price,$quantity){
 	$uos_id = 1;
@@ -1387,23 +1748,18 @@ function create_invoice_line(&$rpc,$name,$invoiceid,$account_id,$product_id,$par
 		);
 		$invoicelineid = $rpc->create( $line, "account.invoice.line");
 		if ($invoicelineid== -1){
-			echo "errore sul inseriment linea fattura\n";
-	 		var_dump($line);
-	 		echo "\n\n\n\n\n";
+			error_log("CREATE_INVOICE_LINE: errore sul inseriment linea fattura\n");
+			error_log(print_r($line,TRUE));
 	 	}else{
 	 		return $invoicelineid;
-	 	
 	 	}
 }
 
-
-
-function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$acmoveid,$termpag,$partner,$state='posted',$type='out_invoice',$reconcilied = 'false', $comment='', $is_unsolved, $journal_id=1){
+function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$acmoveid,$termpag,$partner,$state='posted',$type='out_invoice',$reconcilied = 'false', $comment='', $is_unsolved, $journal_id=1, $user_id = 1){
 	$company_id = 1;
 	$currency_id = 1;
 	$fiscal_position =1;
 	$period_id = 4;
-	$user_id = 1;
 	
 	$invoice= array(
 			'account_id' => $account_id
@@ -1429,9 +1785,8 @@ function create_invoice(&$rpc,$account_id,$number, $date,$scadenza, $name ='/',$
 		);
 	$invoiceid = $rpc->create( $invoice, "account.invoice");
 		if ($invoiceid== -1){
-			var_dump($invoice);
-			echo "Function creo fattura";
-			echo "\n\n\n\n\n";
+			error_log("CREATE_INVOICE_LINE: Function creo fattura\n");
+			error_log(print_r($invoice,TRUE));
 			return -1;
 		}
 		return $invoiceid;
