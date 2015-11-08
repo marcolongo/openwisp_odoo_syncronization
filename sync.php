@@ -311,6 +311,109 @@ class product_list_item {
 }
 
 
+class product_template{
+	private $DEBUGNAME='product_template:';
+	
+	var $active = TRUE;
+	private $default_code;
+	private $categ_id = "";
+	var $type = 'product';
+	var $name = '';
+	var $ean13 = '';
+	private  $description = '';
+	private  $list_price;
+	private  $seller_id = "";
+	var $seller_qty = 1;
+	var $qty_available = 10000;
+	var $virtual_available= 10000;
+	var $seller_delay = 1;
+	private  $description_purchase = "";
+	private  $standard_price;
+	
+	function return_array(){
+		return array(
+			'active'=> $this->active
+			, 'default_code'=> $this->default_code
+		   , 'categ_id'=> $this->categ_id
+			, 'type'=> $this->type
+			, 'name'=> $this->name
+			,'ean13'=> $this->ean13
+			, 'description'=> $this->description
+		 	, 'default_code'=> $this->default_code
+		 	, 'list_price'=> $this->list_price
+		 	, 'seller_id'=> $this->seller_id
+		 	, 'seller_qty'=> $this->seller_qty
+		 	, 'qty_available'=> $this->qty_available
+		 	, 'virtual_available'=> $this->virtual_available
+		 	, 'seller_delay'=> $this->seller_delay
+		 	, 'description_purchase'=> $this->description_purchase
+		 	, 'standard_price'=>$this->standard_price
+		);
+	}
+	
+	function write(&$rpc){
+		$this->id= $rpc->create( $this->return_array(), "product.template");
+		if ($this->id== -1){
+			$this->ean13 ="";
+			$this->id = $rpc->create(  $this->return_array(), "product.template");
+			if ($this->id== -1){
+				echo "articolo\n";
+				error_log("$this->DEBUGNAME {$this->owner_name}: not writed $name \n");
+				error_log(print_r($this, true));
+				die();
+			}
+		}
+	}
+	
+	function set_default_code($code){
+		$this->default_code = $code;
+	}
+	
+	function set_categ_id($name){
+		if(is_numeric($name)){
+			$this->categ_id= $name;
+		}else{
+			error_log("$this->DEBUGNAME {$this->name}: has not numeric category id: $name \n");
+		}
+	}
+	
+	function set_name($name){
+		$this->name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_description($name){
+		$this->description= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_list_price($name){
+		if(is_numeric($name)){
+			$this->list_price= $name;
+		}else{
+			error_log("$this->DEBUGNAME {$this->name}: has not numeric list price: $name \n");
+		}
+	}
+	
+	function set_seller_id($name){
+		if(is_numeric($name)){
+			$this->seller_id= $name;
+		}else{
+			error_log("$this->DEBUGNAME {$this->name}: has not numeric seller id: $name \n");
+		}
+	}
+	
+	function  set_description_purchase($name){
+		$this->description_purchase= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function  set_standard_price($name){
+		if(is_numeric($name)){
+			$this->standard_price= $name;
+		}else{
+			error_log("$this->DEBUGNAME {$this->name}: has not numeric standard price: $name \n");
+		}
+	}
+}
+
 
 $conn = new mysqli($config['dbhost'], $config['dbuser'], $config['dbpassword'], $config['dbname'] );
 // Check connection
@@ -1352,6 +1455,7 @@ function sync_insoluti(&$conn,&$rpc){
 
 function sync_articoli(&$conn,&$rpc){
 	global $listver;
+	
 	echo "Carico prodotti" . date('Y-m-d H:i:s') ."\n";
 	$DEBUGNAME='SYNC_ARTICOLI:';
 	$listver= 2;
@@ -1388,6 +1492,7 @@ function sync_articoli(&$conn,&$rpc){
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
 	{
+	$product= new product_template;
 	$notefornitore = "";
 	if($row->tiposconto == 1){
 	    //SCONTO
@@ -1405,112 +1510,62 @@ function sync_articoli(&$conn,&$rpc){
 		$idcategory = $rpc->search(array(array('name', '=', $gruppo->descrizione)),"product.category");
 		}
 		//--------
+	
+		
+	//===============================================CREO PRODOTTO
+	$product->active=TRUE;
+	$product->set_default_code($row->codice);
+	$product->set_categ_id(isset($idcategory[0])?$idcategory[0]:"");
+	$product->set_name(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome));
+	$product->ean13=$row->barcode;
+	$product->set_description($note);
+	$product->set_seller_id(isset($idfornitore[0])?$idfornitore[0]:"");
+	$product->set_description_purchase($notefornitore);
+	$product->set_standard_price(str_replace(',', '.', $row->costo));
+	
 	if( $row->prezzolistino!= '0')
-		{
-		 	$articolo = array(
-			'active'=>true
-			, 'default_code' => $row->codice
-			,'categ_id' => isset($idcategory[0])?$idcategory[0]:""
-			, 'type' => 'product'
-			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-			, 'ean13'=> $row->barcode
-			, 'description' =>  $note
-		 	, 'default_code' => $row->codice
-		 	, 'list_price' => str_replace(',', '.', $row->prezzolistino)
-		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
-		 	, 'qty_available' => 10000
-		 	, 'virtual_available' => 10000
-		 	, 'seller_qty' => 1
-		 	, 'seller_delay' => 1
-		 	, 'description_purchase' => $notefornitore
-		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
-
-	 	);
-	 	}
-	 	elseif($row->prezzolistino == '0' and $row->prezzonetto != '0'){
-		 	$articolo = array(
-			'active'=>true
-			, 'default_code' => $row->codice
-		   , 'categ_id' => isset($idcategory[0])?$idcategory[0]:""
-			, 'type' => 'product'
-			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-			,'ean13'=>$row->barcode
-			, 'description' =>  $note
-		 	, 'default_code' => $row->codice
-		 	, 'list_price' => str_replace(',', '.', $row->prezzonetto)
-		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
-		 	, 'qty_available' => 10000
-		 	, 'virtual_available' => 10000
-		 	, 'seller_qty' => 1
-		 	, 'seller_delay' => 1
-		 	, 'description_purchase' => $notefornitore
-		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
-
-		 	);
-		 }
-		elseif($row->prezzolistino == '0' and $row->prezzonetto == '0' and $row->prezzofinale != 0){
-			$articolo = array(
-			'active'=>true
-			, 'default_code' => $row->codice
-		   , 'categ_id' => isset($idcategory[0])?$idcategory[0]:""
-			, 'type' => 'product'
-			, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-			,'ean13'=>$row->barcode
-			, 'description' =>  $note
-		 	, 'default_code' => $row->codice
-		 	, 'list_price' => str_replace(',', '.', $row->prezzofinale)
-		 	, 'seller_id' =>  isset($idfornitore[0])?$idfornitore[0]:""
-		 	, 'seller_qty' => 1
-		 	, 'qty_available' => 10000
-		 	, 'virtual_available' => 10000
-		 	, 'seller_delay' => 1
-		 	, 'description_purchase' => $notefornitore
-		 	, 'standard_price' =>str_replace(',', '.', $row->costo)
-		 	);
-	 	}else{
-	 		error_log($DEBUGNAME . "C'è qualcosa che non  va codice: $row->codice \n");
-	 		continue;
-	 	}
-	 	
-	 	$articoli = $rpc->create( $articolo, "product.template");
-	 	if ($articoli== -1){
-	 		$articolo['ean13'] ="";
-	 		$articoli = $rpc->create( $articolo, "product.template");
-	 			if ($articoli== -1){
-	 				echo "articolo\n";
-	 				var_dump($articolo);
-	 				die();
-		 	}
-		}	 	
-	 	
-		if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
-		 	$listino1 = new product_list_item;
-		 	$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
-		 	$listino1->price_discount = -1;
-		 	$listino1->price_surcharge = $row->prezzofinale;
-		 	$listino1->base= 2;
-		 	$listino1->price_version_id= 3;
-		 	$listino1->product_id = $articoli;
-			$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
-			if ($tmp == -1){
-				var_dump($listino1->return_array());
-				die();
-			}
+	{
+		$product->set_list_price(str_replace(',', '.', $row->prezzolistino));
+	}elseif($row->prezzolistino == '0' and $row->prezzonetto != '0'){
+	 	$product->set_list_price(str_replace(',', '.', $row->prezzonetto));
+	}elseif($row->prezzolistino == '0' and $row->prezzonetto == '0' and $row->prezzofinale != 0){
+		$product->set_list_price(str_replace(',', '.', $row->prezzofinale));
+	}else{
+	 	error_log($DEBUGNAME . "C'è qualcosa che non  va codice: $row->codice \n");
+	 	continue;
+	 }
+	$product->write($rpc);
+	//===============================================================
+	
+	
+	if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
+	 	$listino1 = new product_list_item;
+	 	$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+	 	$listino1->price_discount = -1;
+	 	$listino1->price_surcharge = $row->prezzofinale;
+	 	$listino1->base= 2;
+	 	$listino1->price_version_id= 3;
+	 	$listino1->product_id = $articoli;
+		$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
+		if ($tmp == -1){
+			var_dump($listino1->return_array());
+			die();
 		}
-		if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
-			$listino1 = new product_list_item;
-			$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
-			$listino1->price_discount =  -1;
-			$listino1->price_surcharge = $row->prezzofinale2;
-			$listino1->base= 2;
-			$listino1->price_version_id= 4;
-			$listino1->product_id = $articoli;
-			$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
-			if ($tmp == -1){
-				var_dump($listino1->return_array());
-				die();
-			}
+	}
+	if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
+		$listino1 = new product_list_item;
+		$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+		$listino1->price_discount =  -1;
+		$listino1->price_surcharge = $row->prezzofinale2;
+		$listino1->base= 2;
+		$listino1->price_version_id= 4;
+		$listino1->product_id = $articoli;
+		$tmp = $rpc->create( $listino1->return_array(), "product.pricelist.item");
+		if ($tmp == -1){
+			var_dump($listino1->return_array());
+			die();
 		}
+	}
 	 	
 	 	
 	 	if(!empty($idfornitore)){
