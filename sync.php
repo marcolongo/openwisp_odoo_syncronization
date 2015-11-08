@@ -35,17 +35,17 @@ class res_partner {
 	private $name = "";
 	private $city = "";
 	private $contact_address = "";
-	public  $customer = true;
-	public $supplier = false;
+	public  $customer = TRUE;
+	public $supplier = FALSE;
 	private $display_name = "";
-	var $employee ="";
+	var $employee = FALSE;
 	private $vat ="";
-	var $is_company;
+	var $is_company = FALSE;
 	var $lang = "it_IT";
 	private  $phone = "";
 	private  $mobile = "";
 	private  $street = "";
-	private $user_id;
+	private $user_id = "";
 	private $fiscalcode = "";
 	var $type = 'contact';
 	var $tz = 'Europe/Rome';
@@ -87,7 +87,9 @@ class res_partner {
 		if(is_numeric($name)){
 			$this->phone= $name;
 		}else{
-			error_log("{$this->name}: has not numeric phone number: $name \n");
+			if($name!==""){
+				error_log(" $this->DEBUGNAME {$this->name}: has not numeric phone number: $name");
+			}
 		}
 	}
 	
@@ -95,7 +97,9 @@ class res_partner {
 		if(is_numeric($name)){
 			$this->mobile= $name;
 		}else{
-			error_log("{$this->name}: has not numeric phone number: $name \n");
+			if($name!==""){
+				error_log("$this->$DEBUGNAME {$this->name}: has not numeric mobile number: $name");
+			}
 		}
 	}
 	
@@ -107,20 +111,22 @@ class res_partner {
 		if(is_numeric($name)){
 			$this->user_id= $name;
 		}else{
-			error_log("{$this->name}: has not numeric user id: $name \n");
+			if($name!==""){
+				error_log("$this->DEBUGNAME {$this->name}: has not numeric user id: $name");
+			}
 		}
 	}
 	
 	function set_zip($name){
-		if (preg_match('/^\d{5}$/', $name)) {
-			$this->zip= $name;
+		if (preg_match('/\d{5}$/', $name, $tmp)) {
+			$this->zip= $tmp[0];
 		} else {
-			error_log("{$this->name}: has not invalid zip code: $name \n");
+			error_log(" $this->DEBUGNAME {$this->name}: has not invalid zip code: $name");
 		}
 	}
 	
 	function set_property_payment_term($name){
-		$this->property_payment_term= 'account.payment.term,'.name;
+		$this->property_payment_term= 'account.payment.term,'.$name;
 	}
 	
 	function set_comment($name){
@@ -151,7 +157,7 @@ class res_partner {
 			, 'zip' => $this->zip
 			, 'credit_limit' => $this->credit_limit
 			, 'country_id' => $this->country_id
-			, 'state_id' => $this->street
+			, 'state_id' => $this->state_id
 			, 'property_account_receivable' => $this->property_account_receivable
 			, 'property_account_position' => $this->property_account_position
 			, 'property_payment_term' => $this->property_payment_term
@@ -243,7 +249,7 @@ class res_partner_bank{
 		if(is_numeric($name)){
 			$this->account_number= $name;
 		}else{
-			error_log($DEBUGNAME . "{$this->owner_name}: has not numeric account number: $name \n");
+			error_log("$DEBUGNAME {$this->owner_name}: has not numeric account number: $name \n");
 		}
 	}
 	
@@ -272,11 +278,12 @@ class product_list_item {
 	var $sequence = '5';
 	var $price_max_margin = 0;
 	var $product_id;
+	var $price_surcharge= 0;
 	var $base = 2;
 	var $base_pricelist_id = "";
 	var $price_version_id;
 	var $company_id = "";
-	var $price_discount = 1.0;
+	var $price_discount = 0;
 	
 	function return_array(){
 		return array(
@@ -287,6 +294,7 @@ class product_list_item {
 				, 'name' => $this->name
 				, 'sequence' => $this->sequence
 				, 'price_max_margin' => $this->price_max_margin
+				, 'price_surcharge' => $this->price_surcharge
 				, 'product_id' => $this->product_id
 				, 'base' => $this->base
 				, 'base_pricelist_id' => $this->base_pricelist_id
@@ -320,15 +328,15 @@ $x = $rpc->login("admin", "m1a1u1c1-", "mauceri", $config['odoourl'] . "xmlrpc/2
 
 #sync_bank($conn,$rpc);
 ////sync_agent($conn,$rpc);
-#sync_clienti_vat($conn,$rpc);
-#sync_clienti_codfis($conn,$rpc);
-#sync_clienti_destcons($conn,$rpc);
-#sync_fornitori($conn,$rpc);
+sync_clienti_vat($conn,$rpc);
+sync_clienti_codfis($conn,$rpc);
+sync_clienti_destcons($conn,$rpc);
+sync_fornitori($conn,$rpc);
 #sync_gruppi($conn,$rpc);
 //crea_listino($conn,$rpc);
 #sync_articoli($conn,$rpc);
-sync_fatture($conn,$rpc);
-sync_insoluti($conn,$rpc);
+#sync_fatture($conn,$rpc);
+#sync_insoluti($conn,$rpc);
 	
 
 
@@ -714,7 +722,7 @@ function sync_fornitori(&$conn,&$rpc){
 	 	$partner->set_zip($cap);
 	 	$partner->property_account_receivable= $conto;
 	 	$partner->set_property_payment_term($termpag);
-	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
+	 	$partner->set_comment("note1: " .$row->note1 . "\n note2: " . $row->note2 ."\n desc1 ". $row->desc1 . "\n desc2: " . "\n" . (isset($row->detnote) ? $row->detnote : ""));
 	 	$partner->write($rpc);
 	 	//=========================================
 	 	
@@ -1478,7 +1486,8 @@ function sync_articoli(&$conn,&$rpc){
 		if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
 		 	$listino1 = new product_list_item;
 		 	$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
-		 	$listino1->price_discount = ($row->prezzofinale / $row->costo);
+		 	$listino1->price_discount = -1;
+		 	$listino1->price_surcharge = $row->prezzofinale;
 		 	$listino1->base= 2;
 		 	$listino1->price_version_id= 3;
 		 	$listino1->product_id = $articoli;
@@ -1491,7 +1500,8 @@ function sync_articoli(&$conn,&$rpc){
 		if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
 			$listino1 = new product_list_item;
 			$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
-			$listino1->price_discount = ($row->prezzofinale2 / $row->costo);
+			$listino1->price_discount =  -1;
+			$listino1->price_surcharge = $row->prezzofinale2;
 			$listino1->base= 2;
 			$listino1->price_version_id= 4;
 			$listino1->product_id = $articoli;
