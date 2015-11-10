@@ -191,10 +191,9 @@ class res_partner {
 	}
 }
 
-
 class res_partner_bank{
 	private $DEBUGNAME='res_partner.bank';
-	
+
 	var $id;
 	private  $owner_name;
 	private $street;
@@ -207,35 +206,35 @@ class res_partner_bank{
 	var $bank_cab;
 	var $bank_abi;
 	var $state = 'bank';
-	
+
 	function return_array(){
 		return array(
-			'owner_name' => $this->owner_name
-			,'street' => $this->street
-			,'name' => $this->name
-			,'city' => $this->city
-			,'partner_id' => $this->partner_id
-			,'bank_name' => $this-> bank
-			,'bank' => $this->bank
-			,'acc_number' => $this->acc_number
-			,'bank_cab' => $this->bank_cab
-			,'bank_abi' => $this->bank_abi
-			,'state' => $this->state
+				'owner_name' => $this->owner_name
+				,'street' => $this->street
+				,'name' => $this->name
+				,'city' => $this->city
+				,'partner_id' => $this->partner_id
+				,'bank_name' => $this-> bank
+				,'bank' => $this->bank
+				,'acc_number' => $this->acc_number
+				,'bank_cab' => $this->bank_cab
+				,'bank_abi' => $this->bank_abi
+				,'state' => $this->state
 		);
 	}
-	
+
 	function set_owner_name($name){
 		$this->owner_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
 	}
-	
+
 	function set_street($name){
 		$this->street= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
 	}
-	
+
 	function set_city($name){
 		$this->city= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
 	}
-	
+
 	function set_partner_id($name){
 		if(is_numeric($name)){
 			$this->partner_id= $name;
@@ -243,19 +242,19 @@ class res_partner_bank{
 			error_log($this->DEBUGNAME . "{$this->owner_name}: has not numeric partner id: $name");
 		}
 	}
-	
+
 	function set_bank_name($name){
 		$this->bank_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
 	}
-	
+
 	function set_bank($name){
-	if(is_numeric($name)){
+		if(is_numeric($name)){
 			$this->bank= $name;
 		}else{
 			error_log($this->DEBUGNAME . "{$this->owner_name}: has not numeric bank: $name");
 		}
 	}
-	
+
 	function set_account_number($name){
 		if(is_numeric($name)){
 			$this->account_number= $name;
@@ -263,9 +262,9 @@ class res_partner_bank{
 			error_log("$this->DEBUGNAME {$this->owner_name}: has not numeric account number: $name");
 		}
 	}
-	
-	
-	
+
+
+
 	function write(&$rpc){
 		$bancaid = $rpc->create( $this->return_array(), "res.partner.bank");
 		if ($bancaid== -1){
@@ -273,10 +272,221 @@ class res_partner_bank{
 			error_log(print_r($this,true));
 			die();
 		}
-		$this->id=$bancaid;	
+		$this->id=$bancaid;
 	}
 }
 
+class account_invoice{
+	private $DEBUGNAME='account.invoice';
+	
+	var $id;
+	private  $account_id;
+	var $company_id;
+	var $number;
+	var $currency_id;
+	private  $date_invoice;
+	private  $date_due;
+	var $fiscal_position;
+	var $internal_number;
+	var $period_id;
+	private  $name = '/';
+	var $move_id;
+	var $payment_term;
+	private  $partner_id;
+	private  $journal_id = 1;
+	var $state ='posted';
+	var $type = 'out_invoice';
+	var $reconciled = FALSE;
+	private  $user_id = 1;
+	private  $comment = '';
+	var $is_unsolved;
+	
+	function return_array(){
+		return array(
+		'account_id' => $this->account_id
+		, 'company_id' => $this->company_id
+		, 'number' => $this->number
+		, 'currency_id' => $this->currency_id
+		, 'date_invoice' => $this->date_invoice
+		, 'date_due' => $this->date_due
+		, 'fiscal_position' => $this->fiscal_position
+		, 'internal_number' => $this->internal_number
+		, 'period_id' => $this->period_id
+		, 'name' => $this->name
+		, 'move_id' => $this->move_id
+		, 'payment_term' => $this->payment_term
+		, 'partner_id' => $this->partner_id
+		, 'journal_id' => $this->journal_id
+		, 'state' => $this->state
+		, 'type' => $this->type
+		, 'reconciled' => $this->reconciled
+		, 'user_id' => $this->user_id
+		, 'comment' => $this->comment
+		, 'is_unsolved' => $this->is_unsolved
+		);
+	}
+	
+	function write(&$rpc){
+		$this->id=$rpc->create($this->return_array(), "account.invoice");
+		if ($this->id== -1){
+			error_log("CREATE_INVOICE_LINE: Function creo fattura\n");
+			error_log(print_r($this,TRUE));
+			return -1;	
+		}
+		
+	}
+	
+	function set_account_id($name){
+		if(is_numeric($name)){
+			$this->account_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric account_id id: $name");
+			}
+		}	
+	}
+	
+	function  set_date_invoice($name){
+		//TODO set_date
+		/*
+		if (DateTime::createFromFormat('Y-m-d G:i:s', $name) !== FALSE) {
+			// it's a date
+		}
+		*/
+		$this->date_invoice=$name;
+	}
+	
+	function  set_date_due($name){
+		//TODO set_date
+		/*
+		if (DateTime::createFromFormat('Y-m-d G:i:s', $name) !== FALSE) {
+			// it's a date
+		}
+		*/
+		$this->date_due=$name;
+	}
+	
+	function set_name($name){
+		$this->name=$name;
+	}
+	
+	function set_move_id($name){
+		if(is_numeric($name)){
+			$this->move_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric move_id: $name");
+			}
+		}
+	}
+	
+	function set_parner_id($name){
+		if(is_numeric($name)){
+			$this->partner_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric partner_id: $name");
+			}
+		}
+	}
+	
+	function set_comment($name){
+		$this->comment= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+	}
+	
+	function set_journal_id($name){
+		if(is_numeric($name)){
+			$this->journal_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric journal_id: $name");
+			}
+		}
+	}
+	function set_user_id($name){
+		if(is_numeric($name)){
+			$this->user_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric user_id: $name");
+			}
+		}
+	}
+	
+}
+
+
+
+class account_move{
+	private $DEBUGNAME='account.move';
+	
+	var $id;
+	var $partner_id;
+	var $name;
+	var $state = 'posted';
+	var $period_id = 4;
+	var $journal_id = 1;
+	var $date;
+	var $ref = '';
+	
+	function return_array(){
+		return array(
+			'partner_id' => $this->partner_id
+			, 'name' => $this->name
+			, 'state' => $this->state
+			, 'period_id' => $this->period_id
+			, 'journal_id' => $this->journal_id
+			, 'date' => $this->date
+			, 'ref' => $this->ref
+		);
+	}
+	
+	function  set_date($name){
+		//TODO set_date
+		/*
+		if (DateTime::createFromFormat('Y-m-d G:i:s', $name) !== FALSE) {
+		// it's a date
+		}
+		*/
+		$this->date=$name;
+	}
+	
+	function set_name($name){
+		$this->name=$name;
+	}
+	
+	function set_journal_id($name){
+		if(is_numeric($name)){
+			$this->journal_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric journal_id: $name");
+			}
+		}
+	}
+	
+	function write(&$rpc){
+		$this->id=$rpc->create($this->return_array(), "account.move");
+		if ($this->id== -1){
+			error_log("$DEBUGNAME error to creavete account.move\n");
+			error_log(print_r($this,TRUE));
+			return -1;
+		}
+	
+	}
+	
+	function set_parner_id($name){
+		if(is_numeric($name)){
+			$this->partner_id= $name;
+		}else{
+			if($name!==""){
+				error_log("{$this->DEBUGNAME} {$this->number}: has not numeric partner_id: $name");
+			}
+		}
+	}
+	
+	
+}
 
 
 class product_list_item {
@@ -925,12 +1135,37 @@ function sync_fatture(&$conn,&$rpc){
 		$termpag = mysqli_fetch_object($result);
 		$termpag =  empty($termpag->odoo_id)?"":$termpag->odoo_id;
 		
-		$acmoveid =create_account_move($rpc,$partner[0],"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,$row->DATA,'posted',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT),4,1);
-	
+		//=========================Creo Move Line
+		$acmove = new account_move();
+		$acmove->set_parner_id($partner[0]);
+		$acmove->set_name("15/".str_pad($counter, 5, '0', STR_PAD_LEFT));
+		$acmove->set_date($row->DATA);
+		$acmove->ref="15/".str_pad($counter, 5, '0', STR_PAD_LEFT);
+		$acmove->write($rpc);
+		$acmoveid =$acmove->id;
+		//========================================
+		
+		
 		 //SE NON E' UNA NOTA DI CREDITO
 		if($row->TIPO_CAUSA!='N'){
-			$invoiceid =create_invoice($rpc,33,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) , $row->DATA,$scadenza, '/',$acmoveid,$termpag,$partner[0],$state,'out_invoice','false', $row->numero, $isinsoluto, 1, empty($commerciale[0])?1:$commerciale[0]);
-			if($invoiceid==-1) continue;
+			
+			//=========================Carico Fattura
+			$fattura = new account_invoice();
+			$fattura->set_account_id(33);
+			$fattura->number="15/".str_pad($counter, 5, '0', STR_PAD_LEFT);
+			$fattura->set_date_invoice($row->DATA);
+			$fattura->set_date_due($scadenza);
+			$fattura->set_name('/');
+			$fattura->set_move_id($acmoveid);
+			$fattura->payment_term=$termpag;
+			$fattura->partner_id=$partner[0];
+			$fattura->set_comment($row->numero);
+			$fattura->is_unsolved($isinsoluto);
+			$fattura->set_user_id(empty($commerciale[0])?1:$commerciale[0]);
+			$fattura->write($rpc);
+			if($fattura->id==-1) continue;
+			//=====================================================
+
 			$sql="SELECT * FROM odoo.fatmov where numero = ". $row->numero;
 			$items= mysqli_query($conn, $sql) or die("\nError 04: " . mysql_error() . "\n");
 			while($item = mysqli_fetch_object($items)){
@@ -1116,13 +1351,24 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		$invoiceid=$rpc->write(array($acmovelineid),array('reconcile_id' => $acmovereconcileid),'account.move.line');
 		$reconcilied=$acmovereconcileid;
 		
+		//================================Creo account move 
+		$acmove = new account_move();
+		$acmove->set_parner_id($partner);
+		$acmove->set_name("BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT));
+		$acmove->set_date($row->DATA);
+		$acmove->state='draft';
+		$acmove->ref="BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT);
+		$acmove->write($rpc);
+		//=========================================================
+		
+		
 		$acmoveid = create_account_move($rpc,$partner,"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),$row->DATA,'draft',"BNK1/2015/" . str_pad($counter, 5, '0', STR_PAD_LEFT),4,7);
 		//Creo netto
 		$acmovelineid = create_account_move_line($rpc,$partner,$totnet,0,80,'valid'
 			,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
 			,132
 			,$row->DATA
-			,$acmoveid
+			,$acmove->id
 			,"15/$counter totale"
 			,0
 			,1
@@ -1134,7 +1380,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 			,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . "NOTA DI CREDITO"
 			,94
 			,$row->DATA
-			,$acmoveid
+			,$acmove->id
 			,"15/$counter IVA"
 			,0
 			,1
@@ -1145,7 +1391,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		,"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) . " NOTA DI CREDITO"
 		,33
 		,$data
-		,$acmoveid,'/',0,1,1,$notaid,$acmovereconcileid,$scadenza);
+		,$acmove->id,'/',0,1,1,$notaid,$acmovereconcileid,$scadenza);
 	}
 }
 
