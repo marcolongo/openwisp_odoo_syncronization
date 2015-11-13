@@ -281,14 +281,14 @@ class account_invoice{
 	
 	var $id;
 	private  $account_id;
-	var $company_id;
+	var $company_id = 1;
 	var $number;
-	var $currency_id;
+	var $currency_id = 1;
 	private  $date_invoice;
 	private  $date_due;
-	var $fiscal_position;
+	var $fiscal_position = 1;
 	var $internal_number;
-	var $period_id;
+	var $period_id = 4;
 	private  $name = '/';
 	var $move_id;
 	var $payment_term;
@@ -299,7 +299,7 @@ class account_invoice{
 	var $reconciled = FALSE;
 	private  $user_id = 1;
 	private  $comment = '';
-	var $is_unsolved;
+	var $is_unsolved = FALSE;
 	
 	function return_array(){
 		return array(
@@ -653,17 +653,17 @@ $x = $rpc->login("admin", "m1a1u1c1-", "mauceri", $config['odoourl'] . "xmlrpc/2
 
 
 
-sync_bank($conn,$rpc);
+#sync_bank($conn,$rpc);
 ////sync_agent($conn,$rpc);
-sync_clienti_vat($conn,$rpc);
-sync_clienti_codfis($conn,$rpc);
-sync_clienti_destcons($conn,$rpc);
-sync_fornitori($conn,$rpc);
-sync_gruppi($conn,$rpc);
+#sync_clienti_vat($conn,$rpc);
+#sync_clienti_codfis($conn,$rpc);
+#sync_clienti_destcons($conn,$rpc);
+#sync_fornitori($conn,$rpc);
+#sync_gruppi($conn,$rpc);
 //crea_listino($conn,$rpc);
-sync_articoli($conn,$rpc);
-#sync_fatture($conn,$rpc);
-#sync_insoluti($conn,$rpc);
+#sync_articoli($conn,$rpc);
+sync_fatture($conn,$rpc);
+sync_insoluti($conn,$rpc);
 	
 
 
@@ -1085,7 +1085,6 @@ function sync_fatture(&$conn,&$rpc){
 		$totiva = 0;
 		$scadenza=$row->DATA;
 		$isinsoluto=false;
-		$invoiceid=0;
 		
 		$partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name))),"res.partner");
 		if(empty($partner)){
@@ -1158,9 +1157,10 @@ function sync_fatture(&$conn,&$rpc){
 			$fattura->set_name('/');
 			$fattura->set_move_id($acmoveid);
 			$fattura->payment_term=$termpag;
-			$fattura->partner_id=$partner[0];
+			$fattura->set_parner_id($partner[0]);
 			$fattura->set_comment($row->numero);
-			$fattura->is_unsolved($isinsoluto);
+			$fattura->state=$state;
+			$fattura->is_unsolved=$isinsoluto;
 			$fattura->set_user_id(empty($commerciale[0])?1:$commerciale[0]);
 			$fattura->write($rpc);
 			if($fattura->id==-1) continue;
@@ -1173,7 +1173,7 @@ function sync_fatture(&$conn,&$rpc){
 				$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
 				$invoicelineid = create_invoice_line($rpc,
 					empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name'],
-					$invoiceid,
+					$fattura->id,
 					132,
 					empty($product)?"":$product[0]['id'],
 					$partner[0],
@@ -1203,7 +1203,7 @@ function sync_fatture(&$conn,&$rpc){
 			 	}
 			 	
 			 	if($item->IVA !== ''){	
-			 		$invoicelinetaxid =create_invoice_tax($rpc,$nameiva,$invoiceid,94,$item->PREZZO,$ivacode,($ivacode - 1),round((($item->PREZZO *  $item->QTA) * $item->IVA /100 ),2));
+			 		$invoicelinetaxid =create_invoice_tax($rpc,$nameiva,$fattura->id,94,$item->PREZZO,$ivacode,($ivacode - 1),round((($item->PREZZO *  $item->QTA) * $item->IVA /100 ),2));
 				}
 			}
 		
@@ -1211,18 +1211,18 @@ function sync_fatture(&$conn,&$rpc){
 			$sql="SELECT T_FATTURA, T_SPEINCAS, T_IMP1, T_IVA FROM odoo.totfat where NUMERO = ". $row->numero;
 			$items= mysqli_query($conn, $sql) or die("\nError 05: " . mysql_error() . "\n");
 			while($item = mysqli_fetch_object($items)){
-				$fattura = $rpc->searchread(array(array('id', '=', $invoiceid)),"account.invoice",array('amount_untaxed','amount_tax','id'));
-				$storno= $totnet - $fattura[0]['amount_untaxed'];
+				$fatture= $rpc->searchread(array(array('id', '=', $fattura->id)),"account.invoice",array('amount_untaxed','amount_tax','id'));
+				$storno= $totnet - $fatture[0]['amount_untaxed'];
 				if($item->T_SPEINCAS > 0){
 					$invoicelineid = create_invoice_line($rpc,'storno e s. i.'
-					,$invoiceid,132
+					,$fattura->id,132
 					,52586
 					,$partner[0]
 					,$storno
 					,1);
 				
-					$storno= $totiva - $fattura[0]['amount_tax'];
-					$invoicelinetaxid= create_invoice_tax($rpc,'IVA a debito 22%',$invoiceid,94,$storno,79,78,round($storno,2));
+					$storno= $totiva - $fatture[0]['amount_tax'];
+					$invoicelinetaxid= create_invoice_tax($rpc,'IVA a debito 22%',$fattura->id,94,$storno,79,78,round($storno,2));
 			 	}
 			}
 		}
@@ -1239,13 +1239,13 @@ function sync_fatture(&$conn,&$rpc){
 		}
 		
 		//Creo MOVE LINE netto
-		$acmovelineid = create_account_move_line($rpc,$partner[0],$totnet,0,80,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",$totnet,1,1,$invoiceid);
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totnet,0,80,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,132,$row->DATA,$acmoveid,"15/$counter totale",$totnet,1,1,$fattura->id);
 		//Creo MOVE LINE IVA
-		$acmovelineid = create_account_move_line($rpc,$partner[0],$totiva,0,79,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",$totiva,1,1,$invoiceid);
+		$acmovelineid = create_account_move_line($rpc,$partner[0],$totiva,0,79,'valid',"15/".str_pad($counter, 5, '0', STR_PAD_LEFT) ,94,$row->DATA,$acmoveid,"15/$counter IVA",$totiva,1,1,$fattura->id);
 		if($row->id == 1 or $row->id == 2 or $row->id == 19 or $row->id == 42 or $row->id == 29 or $row->id == 45 or $row->id == 50 or $row->id == 58 or $row->id == 114 or $row->id == 80){
 			sync_paid_immediato($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$scadenza,$acmoveid,$row->DATA);
 		}else{
-			sync_paid_scadenze($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$isinsoluto,$acmoveid,$state,$invoiceid);
+			sync_paid_scadenze($conn,$rpc,$row,$counter,$partner[0],$totnet + $totiva,$isinsoluto,$acmoveid,$state,$fattura->id);
 		}
 
 	}
