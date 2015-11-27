@@ -61,19 +61,19 @@ class res_partner {
 	var $comment;
 	
 	function set_name($name){
-		$this->name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->name= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_city($name){
-		$this->city= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->city= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_contact_address($name){
-		$this->contact_address= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->contact_address= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_display_name($name){
-		$this->display_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->display_name= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_vat($name){
@@ -115,7 +115,7 @@ class res_partner {
 	}
 	
 	function set_street($name){
-		$this->street= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->street= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_user_id($name){
@@ -141,7 +141,7 @@ class res_partner {
 	}
 	
 	function set_comment($name){
-		$this->comment= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->comment= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	
@@ -226,15 +226,15 @@ class res_partner_bank{
 	}
 
 	function set_owner_name($name){
-		$this->owner_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->owner_name= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 
 	function set_street($name){
-		$this->street= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->street= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 
 	function set_city($name){
-		$this->city= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->city= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 
 	function set_partner_id($name){
@@ -246,7 +246,7 @@ class res_partner_bank{
 	}
 
 	function set_bank_name($name){
-		$this->bank_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->bank_name= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 
 	function set_bank($name){
@@ -393,7 +393,7 @@ class account_invoice{
 	}
 	
 	function set_comment($name){
-		$this->comment= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->comment= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_journal_id($name){
@@ -940,12 +940,12 @@ class product_template{
 	
 	function set_name($name){
 		$name=str_replace('ø', "", $name);	
-		$this->name=pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->name=pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_description($name){
 		
-		$this->description= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->description= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function set_list_price($name){
@@ -965,7 +965,7 @@ class product_template{
 	}
 	
 	function  set_description_purchase($name){
-		$this->description_purchase= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
+		$this->description_purchase= pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($name, 'utf-8', 'iso-8859-1')));
 	}
 	
 	function  set_standard_price($name){
@@ -1020,10 +1020,10 @@ function sync_agent(&$conn,&$rpc){
 	 	$cellulare=strcmp(substr($row->telefono, 0),"3")?$row->telefono:"";	 	
 		
 		$user = array(
-	  	'name'=> pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nominativo))
+	  	'name'=> pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nominativo, 'utf-8', 'iso-8859-1')))
 	  	, 'phone' => $fisso
 	 	, 'mobile' => $cellulare
-		, 'comment' => pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE', $row->indirizzo . "\n" . $row->località ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->cod_part_iv ))
+		, 'comment' => pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE', mb_convert_encoding($row->indirizzo . "\n" . $row->località ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->cod_part_iv, 'utf-8', 'iso-8859-1') ))
 	 	);
 	 	$userid = $rpc->create( $user, "res.partner");
 		$agent= array (
@@ -1051,7 +1051,7 @@ echo "Carico Banche clienti\n";
 while($row = mysqli_fetch_object($ids))
 	{
 	$bank=array(
-	  	'name'=> pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->banca))
+	  	'name'=> pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->banca, 'utf-8', 'iso-8859-1'))
 	 	, 'cab' =>  substr(pg_escape_string($row->cab),0,5)
 	 	, 'abi' =>  substr(pg_escape_string($row->cabi),0,5)
 	 	, 'street2' =>  pg_escape_string($row->bancadip)
@@ -2143,7 +2143,7 @@ function sync_articoli(&$conn,&$rpc){
 	
 	if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
 	 	$listino1 = new product_list_item;
-	 	$listino1->name = pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome));
+	 	$listino1->name = pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nome, 'utf-8', 'iso-8859-1')));
 	 	$listino1->price_discount = -1;
 	 	$listino1->price_surcharge = $row->prezzofinale;
 	 	$listino1->base= 2;
@@ -2157,7 +2157,7 @@ function sync_articoli(&$conn,&$rpc){
 	}
 	if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
 		$listino1 = new product_list_item;
-		$listino1->name = pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome));
+		$listino1->name = pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nome, 'utf-8', 'iso-8859-1')));
 		$listino1->price_discount =  -1;
 		$listino1->price_surcharge = $row->prezzofinale2;
 		$listino1->base= 2;
@@ -2200,7 +2200,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	 'company_id' => 1
 	 	,'filter' =>'product'
 	 	, 'location_id' =>12
-	 	, 'name' =>'INV: '.pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
+	 	, 'name' =>'INV: '.pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nome, 'utf-8', 'iso-8859-1')))
 	 	, 'product_id'=> $articolo[0]
 	 	);
 	 	$inventoryid= $rpc->create( $inventory, "stock.inventory");
@@ -2213,7 +2213,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	 'company_id' => 1
 	 	,'location_name' =>'Physical Locations / WH / Stock'
 	 	, 'location_id' =>12
-	 	, 'product_name' =>  pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
+	 	, 'product_name' =>  pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nome, 'utf-8', 'iso-8859-1')))
 	 	, 'inventory_id' => $inventoryid
 	 	, 'product_qty' => 10000
 	 	, 'product_uom_id' => 1
@@ -2237,7 +2237,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	, 'inventory_id' =>$inventoryid
 	 	, 'state' => 'done'
 	 	, 'product_uom_qty' => 10000
-	 	, 'name' =>  pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
+	 	, 'name' =>  pg_escape_string(iconv('UTF-8','ISO-8859-1//TRANSLIT//IGNORE',mb_convert_encoding($row->nome, 'utf-8', 'iso-8859-1')))
 	 	, 'procure_method' => 'make_to_stock'
 	 	, 'product_id'=> $articolo[0]
 	 	);
