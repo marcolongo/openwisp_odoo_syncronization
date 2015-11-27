@@ -417,7 +417,115 @@ class account_invoice{
 	
 }
 
-
+class account_invoice_tax
+{
+    private $DEBUGNAME = 'account.invoice.tax';
+    var $id;
+    private $invoice_id;
+    private $name;
+    private $account_id;
+    private $company_id;
+    private $base_amount;
+    private $tax_code_id;
+    private $base_code_id;
+    private $amount;
+    function set_amount($name)
+    {
+        if (is_numeric($name)) {
+            $this->amount = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric amount: $name");
+            }
+        }
+    }
+    function set_base_code_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->base_code_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric base code id: $name");
+            }
+        }
+    }
+    function set_tax_code_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->tax_code_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric tax code id: $name");
+            }
+        }
+    }
+    function set_base_amount($name)
+    {
+        if (is_numeric($name)) {
+            $this->base_amount = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric base amount: $name");
+            }
+        }
+    }
+    function set_company_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->company_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric company_id: $name");
+            }
+        }
+    }
+    function set_account_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->account_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric account_id: $name");
+            }
+        }
+    }
+    function set_name($name)
+    {
+        $this->name = $name;
+    }
+    function set_invoice_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->invoice_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->number}: has not numeric invoice_id: $name");
+            }
+        }
+    }
+    function return_array()
+    {
+        return array(
+            'invoice_id' => $this->invoice_id,
+            'name' => $this->name,
+            'account_id' => $this->account_id,
+            'company_id' => $this->company_id,
+            'base_amount' => $this->base_amount,
+            'tax_code_id' => $this->tax_code_id,
+            'base_code_id' => $this->base_code_id,
+            'amount' => $this->amount
+        );
+    }
+    function write(&$rpc)
+    {
+        $this->id = $rpc->create($this->return_array(), "account.invoice.tax");
+        if ($this->id == - 1) {
+            error_log("$DEBUGNAME error create invoice tax\n");
+            error_log(print_r($this, TRUE));
+            return - 1;
+        }
+    }
+}
 
 class account_move{
 	private $DEBUGNAME='account.move';
@@ -533,6 +641,233 @@ class product_list_item {
 	}
 }
 
+class account_move_line{
+    private $DEBUGNAME = 'account_move_line:';
+    
+    var $id;
+    private  $partner_id ='';
+    private  $company_id = 1;
+    private  $blocked='';
+    private  $create_uid='';
+    private  $date_maturity='';
+    private  $credit=0;
+    private  $debit=0;
+    private  $journal_id= 1;
+    private  $tax_code_id='';
+    private  $reconcile_ref='';
+    private  $reconcile_id= '';
+    private  $state;
+    private  $ref;
+    private  $account_id;
+    private  $period_id = 4;
+    private  $date;
+    private  $move_id;
+    private  $name;
+    private  $tax_amount;
+    private  $quantity =1;
+    private  $stored_invoice_id;
+    private  $day;
+    function set_day($name){
+        //TODO: control of input (check date)
+        $this->day=$name;
+    }
+    
+    function set_stored_invoice_id($name)
+    {
+        is_numeric($name)?
+        $this->stored_invoice_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric stored_invoice id: $name");
+    }
+    
+    function set_quantity($name)
+    {
+        is_numeric($name)?
+        $this->quantity = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric quantity id: $name");
+    }
+    
+    function set_tax_ammount($name)
+    {
+        is_numeric($name)?
+        $this->tax_amount = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric tax_amount id: $name");
+    }
+    
+    function set_name($name)
+    {
+        $this->name = $name;
+    }
+    
+    function set_move_id($name)
+    {
+        is_numeric($name)?
+        $this->move_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric move id: $name");
+    }
+    
+    function set_date($name){
+        //TODO: control of input (check date)
+        $this->date=$name;
+    }
+    
+    function set_period_id($name)
+    {
+        is_numeric($name)?
+        $this->period_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric period id: $name");
+    }
+    
+    function set_account_id($name)
+    {
+        is_numeric($name)?
+        $this->account_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric account_id: $name");
+    }
+    
+    function set_ref($name){
+        //TODO: add controll of input
+        $this->ref=$name;
+    }
+    
+    function set_state($name){
+    	//TODO: add controll of input
+        $this->state=$name;    
+    }
+    
+    function set_reconcile_id($name)
+    {
+        is_numeric($name)?
+        $this->reconcile_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric reconcile_id: $name");
+    }
+    
+    function set_tax_code_id($name)
+    {
+        is_numeric($name)?
+        $this->tax_code_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric tax_code_id: $name");
+    }
+    
+    function set_journal_id($name)
+    {
+        is_numeric($name)?
+        $this->journal_id = $name:
+        error_log("{$this->DEBUGNAME} {$this->name}: has not numeric journal_id: $name");
+    }
+    
+    function set_debit($name)
+    {
+        if (is_numeric($name)) {
+            $this->debit = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->name}: has not numeric debit: $name");
+            }
+        }
+    }
+    
+    function set_credit($name)
+    {
+        if (is_numeric($name)) {
+            $this->credit = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->name}: has not numeric credit: $name");
+            }
+        }
+    }
+    
+    function set_date_maturity($name){
+    	//TODO: control of input (check date)
+        $this->date_maturity=$name;
+    }
+    
+    function set_create_uid($name)
+    {
+        if (is_numeric($name)) {
+            $this->create_uid = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->name}: has not numeric create_uid: $name");
+            }
+        }
+    }
+    
+    function set_blocked(){
+        if (is_bool($name)){
+        	$this->blocked=$name;
+        }else{
+            error_log("{$this->DEBUGNAME}: has not boolean blocked variable: $name");
+        }
+        
+    }
+    
+    function set_partner_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->partner_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->name}: has not numeric partner_id: $name");
+            }
+        }
+    }
+    
+    function set_company_id($name)
+    {
+        if (is_numeric($name)) {
+            $this->company_id = $name;
+        } else {
+            if ($name !== "") {
+                error_log("{$this->DEBUGNAME} {$this->name}: has not numeric company_id: $name");
+            }
+        }
+    }
+    
+    function set_reconcilied_ref($name){
+    	$this->reconcile_ref='A'.$name; 
+    }
+    
+    function write(&$rpc)
+    {
+        $this->id = $rpc->create($this->return_array(), "account.move.line");
+        if ($this->id == - 1) {
+            error_log("$DEBUGNAME error to creavete account.move\n");
+            error_log(print_r($this, TRUE));
+            die();
+            return - 1;
+        }
+    }
+    
+    function return_array()
+    {
+        return array(
+            'partner_id' => $this->partner_id,
+            'company_id' => $this->company_id,
+            'blocked' => $this->blocked,
+            'create_uid' => $this->create_uid,
+            'date_maturity' => $this->date_maturity,
+            'credit' => $this->credit,
+            'debit' => $this->debit,
+            'journal_id' => $this->journal_id,
+            'tax_code_id' => $this->tax_code_id,
+            'reconcile_ref' => $this->reconcile_ref,
+            'reconcile_id' => $this->reconcile_id,
+            'state' => $this->state,
+            'ref' => $this->ref,
+            'account_id' => $this->account_id,
+            'period_id' => $this->period_id,
+            'date' => $this->date,
+            'move_id' => $this->move_id,
+            'name' => $this->name,
+            'tax_amount' => $this->tax_amount,
+            'quantity' => $this->quantity,
+            'stored_invoice_id' => $this->stored_invoice_id,
+            'day' => $this->date_maturity
+        );
+    }
+    
+}
 
 class product_template{
 	private $DEBUGNAME='product_template:';
@@ -651,7 +986,6 @@ if ($conn->connect_error) {
 echo "\nConnected successfully\n\n";
 file_put_contents('query.txt', '');
 
-
 $rpc = new OpenERP();
 $x = $rpc->login("admin", "m1a1u1c1-", "mauceri", $config['odoourl'] . "xmlrpc/2/");
 
@@ -674,7 +1008,6 @@ sync_insoluti($conn,$rpc);
 die();
 
 function sync_agent(&$conn,&$rpc){
-
 	{
 	$sql="SELECT * FROM odoo.agenti";
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
@@ -865,8 +1198,6 @@ while($row = mysqli_fetch_object($ids))
 
 function sync_clienti_codfis(&$conn,&$rpc){
 	//TODO importare codice fiscale 
-
-
 	$sql="SELECT RAG_SOC as 'name',
 	 clienti.PROVINCIA as 'provincia',
 	 clienti.INDIRIZZO as 'indirizzo',
@@ -1094,7 +1425,7 @@ function sync_fatture(&$conn,&$rpc){
         LEFT JOIN odoo.agenti ON odoo.clienti.COD_AGE = agenti.id
         GROUP by NUMERO
 		ORDER BY numero ASC ;";
-		
+	
 	$ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
 	while($row = mysqli_fetch_object($ids))
 	{
