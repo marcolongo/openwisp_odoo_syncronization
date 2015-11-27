@@ -46,6 +46,7 @@ class res_partner {
 	private  $mobile = "";
 	private  $street = "";
 	private $user_id = "";
+	var $property_product_pricelist = 1;
 	private $fiscalcode = "";
 	var $type = 'contact';
 	var $tz = 'Europe/Rome';
@@ -60,19 +61,19 @@ class res_partner {
 	var $comment;
 	
 	function set_name($name){
-		$this->name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_city($name){
-		$this->city= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->city= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_contact_address($name){
-		$this->contact_address= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->contact_address= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_display_name($name){
-		$this->display_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->display_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_vat($name){
@@ -114,7 +115,7 @@ class res_partner {
 	}
 	
 	function set_street($name){
-		$this->street= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->street= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_user_id($name){
@@ -140,7 +141,7 @@ class res_partner {
 	}
 	
 	function set_comment($name){
-		$this->comment= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->comment= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	
@@ -163,6 +164,7 @@ class res_partner {
 			, 'user_id' => $this->user_id
 			, 'type' => $this->type
 			, 'tz' => $this->tz
+			, 'property_product_pricelist' => $this->property_product_pricelist
 			, 'tz_offset' => $this->tz_offset
 			, 'zip' => $this->zip
 			, 'credit_limit' => $this->credit_limit
@@ -224,15 +226,15 @@ class res_partner_bank{
 	}
 
 	function set_owner_name($name){
-		$this->owner_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->owner_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 
 	function set_street($name){
-		$this->street= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->street= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 
 	function set_city($name){
-		$this->city= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->city= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 
 	function set_partner_id($name){
@@ -244,7 +246,7 @@ class res_partner_bank{
 	}
 
 	function set_bank_name($name){
-		$this->bank_name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->bank_name= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 
 	function set_bank($name){
@@ -256,11 +258,11 @@ class res_partner_bank{
 	}
 
 	function set_account_number($name){
-		if(is_numeric($name)){
+		//if(is_numeric($name)){
 			$this->account_number= $name;
-		}else{
-			error_log("$this->DEBUGNAME {$this->owner_name}: has not numeric account number: $name");
-		}
+		//}else{
+			//error_log("$this->DEBUGNAME {$this->owner_name}: has not numeric account number: $name");
+		//}
 	}
 
 
@@ -391,7 +393,7 @@ class account_invoice{
 	}
 	
 	function set_comment($name){
-		$this->comment= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->comment= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_journal_id($name){
@@ -602,11 +604,13 @@ class product_template{
 	}
 	
 	function set_name($name){
-		$this->name= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$name=str_replace('ø', "", $name);	
+		$this->name=pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_description($name){
-		$this->description= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		
+		$this->description= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function set_list_price($name){
@@ -626,7 +630,7 @@ class product_template{
 	}
 	
 	function  set_description_purchase($name){
-		$this->description_purchase= preg_replace('/[^A-Za-z0-9\-\s]/', '',$name);
+		$this->description_purchase= pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$name));
 	}
 	
 	function  set_standard_price($name){
@@ -683,10 +687,10 @@ function sync_agent(&$conn,&$rpc){
 	 	$cellulare=strcmp(substr($row->telefono, 0),"3")?$row->telefono:"";	 	
 		
 		$user = array(
-	  	'name'=> preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nominativo)
+	  	'name'=> pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nominativo))
 	  	, 'phone' => $fisso
 	 	, 'mobile' => $cellulare
-		, 'comment' => preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->indirizzo . "\n" . $row->località ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->cod_part_iv )
+		, 'comment' => pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE', $row->indirizzo . "\n" . $row->località ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->provincia ."\n" . $row->cod_part_iv ))
 	 	);
 	 	$userid = $rpc->create( $user, "res.partner");
 		$agent= array (
@@ -714,10 +718,10 @@ echo "Carico Banche clienti\n";
 while($row = mysqli_fetch_object($ids))
 	{
 	$bank=array(
-	  	'name'=> preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->banca)
-	 	, 'cab' =>  substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab),0,5)
-	 	, 'abi' =>  substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cabi),0,5)
-	 	, 'street2' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->bancadip)
+	  	'name'=> pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->banca))
+	 	, 'cab' =>  substr(pg_escape_string($row->cab),0,5)
+	 	, 'abi' =>  substr(pg_escape_string($row->cabi),0,5)
+	 	, 'street2' =>  pg_escape_string($row->bancadip)
 	 	);
 	$bankid = $rpc->create( $bank, "res.bank");
 	 	if ($bankid== -1){
@@ -741,6 +745,7 @@ function sync_clienti_vat(&$conn,&$rpc){
 	 BANCAAPPO as banca, 
 	 clienti.DE_AGG1 as desc1,
 	 clienti.DE_AGG2 as desc2,
+	 clienti.COD_ZON as list,
 	 DIPENDENZA as bancadip, 
 	 clienti.COD_PAG as mod_pag,
 	 CABI as abi,
@@ -788,7 +793,7 @@ while($row = mysqli_fetch_object($ids))
 	 	
 	 	//==============CERCO AGENTE SE IMPOSTATO
 	 	if(!empty($row->agente)){
-	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'. preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->agente) . '%')),"res.partner");
+	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'. pg_escape_string($row->agente) . '%')),"res.partner");
 	 		if(!empty($commerciale[0])){
 	 			$commerciale = $rpc->search(array(array('partner_id', '=',$commerciale[0])),"res.users");
 	 			if ($commerciale== -1){
@@ -796,7 +801,11 @@ while($row = mysqli_fetch_object($ids))
 	 				die();
 	 			}
 	 		}else{
-	 			error_log($DEBUGNAME ."errore agente $row->agente\n");
+	 			if(!$row->agente==='BODO\' STEFANO'){
+	 				error_log($DEBUGNAME ."errore agente $row->agente\n");
+	 			}else{
+	 				$commerciale[0]=11;
+	 			}
 	 		}
 	 	}
 	 	//=========================================
@@ -816,17 +825,21 @@ while($row = mysqli_fetch_object($ids))
 	 	$partner->property_account_receivable= $conto;
 	 	$partner->set_property_payment_term($termpag);
 	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
-		$partner->write($rpc);	
+		if($row->list==6827){
+			$partner->property_product_pricelist=3;
+		}else if($row->list== 122){
+			$partner->property_product_pricelist=4;
+		}
+	 	
+	 	$partner->write($rpc);	
 		//=========================================
 		
 		
 	 	if(empty($row->banca)){
 	   		continue;
 		}
-		$idbanca = $rpc->searchread(array(array('cab', 'like',substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab),0,5)), array('abi', 'like', substr(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->abi),0,5))),
-								"res.bank",
-								array('name','id','cab','abi')
-								);
+		$idbanca = $rpc->searchread(array(array('cab', 'like',substr(pg_escape_string($row->cab),0,5)), array('abi', 'like', pg_escape_string($row->abi),0,5)),
+								"res.bank",array('name','id','cab','abi'));
 							
 		if(empty($idbanca)){
 	  	 	continue;
@@ -862,6 +875,7 @@ function sync_clienti_codfis(&$conn,&$rpc){
 	 clienti.DE_AGG1 as desc1,
 	 clienti.DE_AGG2 as desc2,
 	 clienti.COD_FISCAL as'codice_f',
+	 clienti.COD_ZON as list,
 	 clienti.COD_PAG as mod_pag,
 	 BANCAAPPO as banca, 
 	 DIPENDENZA as bancadip, 
@@ -929,6 +943,11 @@ while($row = mysqli_fetch_object($ids))
 	 	$partner->set_zip($cap);
 	 	$partner->property_account_receivable= $conto;
 	 	$partner->set_property_payment_term($termpag);
+	 	if($row->list==6827){
+	 		$partner->property_product_pricelist=3;
+	 	}else if($row->list== 122){
+	 		$partner->property_product_pricelist=4;
+	 	}
 	 	$partner->set_comment("note1: " .$row->note1 . "\n note2:" . $row->note2 ."\n desc1". $row->desc1 . "\n desc2:" . "\n" . (isset($row->detnote) ? $row->detnote : ""));
 	 	$partner->write($rpc);
 	 	//=========================================
@@ -937,7 +956,7 @@ while($row = mysqli_fetch_object($ids))
 	 	if($row->banca==""){
 	   		continue;
 		}
-		$idbanca = $rpc->searchread(array(array('cab', 'like', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cab)),array('abi', 'like', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->cabi))),"res.bank",array('name','id','cab','abi'));
+		$idbanca = $rpc->searchread(array(array('cab', 'like', pg_escape_string($row->cab)),array('abi', 'like', pg_escape_string($row->cabi))),"res.bank",array('name','id','cab','abi'));
 	 	
 		if(empty($idbanca)){
 			continue;
@@ -970,14 +989,14 @@ function sync_clienti_destcons(&$conn,&$rpc){
 	while($row = mysqli_fetch_object($ids))
 	{
 
-		$idparent = $rpc->search(array(array('name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->RAG_SOC))),"res.partner");
+		$idparent = $rpc->search(array(array('name', 'ilike', pg_escape_string($row->RAG_SOC))),"res.partner");
 		if (empty($idparent)){
-			echo preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->RAG_SOC) . "\n";
+			echo pg_escape_string($row->RAG_SOC) . "\n";
 			continue;
 		}
 		$user = array(
-		'name'=> preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->DESTI_CONS)
-		, 'street' =>   preg_replace('/[^A-Za-z0-9\-\s]/', '', $row->DESTI_CONS . ' ' . $row->INDIR_CONS . ' ' . $row->CAPLO_CONS)
+		'name'=> pg_escape_string($row->DESTI_CONS)
+		, 'street' =>   pg_escape_string( $row->DESTI_CONS . ' ' . $row->INDIR_CONS . ' ' . $row->CAPLO_CONS)
 		, 'parent_id' => $idparent[0]
 		, 'employee' => false  
 		, 'customer' => true
@@ -1042,7 +1061,7 @@ function sync_fornitori(&$conn,&$rpc){
 	 	$partner->set_user_id(empty($commerciale[0])?"":$commerciale[0]);
 	 	$partner->set_street("{$row->indirizzo}");
 	 	$partner->set_zip($cap);
-	 	$partner->set_comment( preg_replace('/[^A-Za-z0-9\-\s]/', ' ',$row->note1 . "\n" . $row->note2));
+	 	$partner->set_comment( pg_escape_string($row->note1 . "\n" . $row->note2));
 	 	$partner->write($rpc);
 	 	//=========================================
 	 	
@@ -1086,13 +1105,13 @@ function sync_fatture(&$conn,&$rpc){
 		$scadenza=$row->DATA;
 		$isinsoluto=false;
 		
-		$partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->name))),"res.partner");
+		$partner = $rpc->search(array(array('display_name', 'ilike', pg_escape_string($row->name))),"res.partner");
 		if(empty($partner)){
 				echo "errore non trovo il CLIENTE  $row->name)\n";
 				continue;
 			}
 		if(!empty($row->agente)){
-	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'. preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->agente) . '%')),"res.partner");
+	 		$commerciale = $rpc->search(array(array('display_name', 'ilike','%'.pg_escape_string($row->agente) . '%')),"res.partner");
 	 		if(!empty($commerciale[0])){
 	 			$commerciale = $rpc->search(array(array('partner_id', '=',$commerciale[0])),"res.users");
 	 			if ($commerciale== -1){
@@ -1172,7 +1191,7 @@ function sync_fatture(&$conn,&$rpc){
 				if($item->PREZZO == 0) continue;
 				$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
 				$invoicelineid = create_invoice_line($rpc,
-					empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name'],
+					empty($product)? pg_escape_string($item->descrizion):$product[0]['name'],
 					$fattura->id,
 					132,
 					empty($product)?"":$product[0]['id'],
@@ -1299,7 +1318,7 @@ function sync_paid_nota(&$conn,&$rpc,$row,$counter,$partner,$totale,$scadenza,$a
 		$product = $rpc->searchread(array(array('default_code', 'ilike', $item->ARTICOLO)),"product.product",array('name','id'));
 		if($product==-1)continue;
 		$invoicelineid = create_invoice_line($rpc
-			, empty($product)? preg_replace('/[^A-Za-z0-9\-\s]/', '',$item->descrizion):$product[0]['name']
+			, empty($product)? pg_escape_string($item->descrizion):$product[0]['name']
 			,$notaid
 			,132
 			,empty($product)?"":$product[0]['id']
@@ -1618,7 +1637,7 @@ function sync_insoluti(&$conn,&$rpc){
     $sql="SELECT scadenze.* , clienti.RAG_SOC FROM odoo.scadenze INNER JOIN odoo.clienti on scadenze.MMCC = clienti.mmcc and scadenze.SSSS = clienti.SSSS WHERE DATA_DOC < '2015-01-01' AND CAUSALE like \"INSOLUTO\" AND PAGATO != 'C' AND PAGATO != 'P' AND NUM_DOC != 0 group by NUM_DOC, DATA_DOC;";
     $ids = mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
     while($line = mysqli_fetch_object($ids)){
-        $partner = $rpc->search(array(array('display_name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$line->RAG_SOC))),"res.partner");
+        $partner = $rpc->search(array(array('display_name', 'ilike', pg_escape_string($line->RAG_SOC))),"res.partner");
 		if(empty($partner[0])){
 		    echo "errore non trovo il CLIENTE  $line->name)\n";
 		    continue;
@@ -1754,7 +1773,7 @@ function sync_articoli(&$conn,&$rpc){
 	$note=$row->note1 . "\n" . $row->note2 . "\n" . $row->note3 . "\n" . $row->note4 . "\n" . $row->note5 . "\n";
 	
 	//Cerco l'id del fornitore
-	$idfornitore = $rpc->search(array(array('name', 'ilike', preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->fornitore)),array('supplier', '=', true)),"res.partner");
+	$idfornitore = $rpc->search(array(array('name', 'ilike', pg_escape_string($row->fornitore)),array('supplier', '=', true)),"res.partner");
 		//Cerco l'id del gruppo
 	$sql="SELECT descrizion as descrizione  FROM odoo.gruppi WHERE CODICE LIKE \"%$row->gruppo\";";
 	$grupquery=  mysqli_query($conn, $sql) or die("\nError 01: " . mysql_error() . "\n");
@@ -1769,7 +1788,7 @@ function sync_articoli(&$conn,&$rpc){
 	$product->active=TRUE;
 	$product->set_default_code($row->codice);
 	$product->set_categ_id(isset($idcategory[0])?$idcategory[0]:"");
-	$product->set_name(preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome));
+	$product->set_name($row->nome);
 	$product->ean13=$row->barcode;
 	$product->set_description($note);
 	$product->set_seller_id(isset($idfornitore[0])?$idfornitore[0]:"");
@@ -1793,7 +1812,7 @@ function sync_articoli(&$conn,&$rpc){
 	
 	if((!empty($row->prezzofinale)) and ($row->prezzofinale != 0)){
 	 	$listino1 = new product_list_item;
-	 	$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+	 	$listino1->name = pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome));
 	 	$listino1->price_discount = -1;
 	 	$listino1->price_surcharge = $row->prezzofinale;
 	 	$listino1->base= 2;
@@ -1807,7 +1826,7 @@ function sync_articoli(&$conn,&$rpc){
 	}
 	if((!empty($row->prezzofinale2)) and ($row->prezzofinale2 != 0)){
 		$listino1 = new product_list_item;
-		$listino1->name = preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome);
+		$listino1->name = pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome));
 		$listino1->price_discount =  -1;
 		$listino1->price_surcharge = $row->prezzofinale2;
 		$listino1->base= 2;
@@ -1850,8 +1869,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	 'company_id' => 1
 	 	,'filter' =>'product'
 	 	, 'location_id' =>12
-	 	, 'name' =>'INV: '.preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
-	 	, 'state' => 'done'
+	 	, 'name' =>'INV: '.pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
 	 	, 'product_id'=> $articolo[0]
 	 	);
 	 	$inventoryid= $rpc->create( $inventory, "stock.inventory");
@@ -1864,7 +1882,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	 'company_id' => 1
 	 	,'location_name' =>'Physical Locations / WH / Stock'
 	 	, 'location_id' =>12
-	 	, 'product_name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+	 	, 'product_name' =>  pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
 	 	, 'inventory_id' => $inventoryid
 	 	, 'product_qty' => 10000
 	 	, 'product_uom_id' => 1
@@ -1888,7 +1906,7 @@ function sync_articoli(&$conn,&$rpc){
 	 	, 'inventory_id' =>$inventoryid
 	 	, 'state' => 'done'
 	 	, 'product_uom_qty' => 10000
-	 	, 'name' =>  preg_replace('/[^A-Za-z0-9\-\s]/', '',$row->nome)
+	 	, 'name' =>  pg_escape_string(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$row->nome))
 	 	, 'procure_method' => 'make_to_stock'
 	 	, 'product_id'=> $articolo[0]
 	 	);
